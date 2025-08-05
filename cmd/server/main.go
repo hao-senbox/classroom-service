@@ -77,7 +77,7 @@ func main() {
 	r := gin.Default()
 
 	room.RegisterRoutes(r, classroomHandler)
-	_, err = c.AddFunc("0 */1 * * * *", func() {
+	_, err = c.AddFunc("0 0 0 * * *", func() {
 		log.Println("🔄 Cron master running...")
 		ctx := context.WithValue(context.Background(), constants.TokenKey, os.Getenv("CRON_SERVICE_TOKEN"))
 		if err := classroomService.CronNotifications(ctx); err != nil {
