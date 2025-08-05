@@ -33,7 +33,6 @@ COPY ./.env /root/.env
 COPY ./scripts/wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
-COPY ./credentials /root/credentials
 # Expose the necessary port
 EXPOSE 8000
 
