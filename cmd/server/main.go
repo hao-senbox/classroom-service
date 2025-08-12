@@ -2,7 +2,9 @@ package main
 
 import (
 	"classroom-service/config"
+	"classroom-service/internal/class"
 	"classroom-service/internal/room"
+	"classroom-service/internal/user"
 	"classroom-service/pkg/constants"
 	"classroom-service/pkg/consul"
 	"classroom-service/pkg/zap"
@@ -52,7 +54,7 @@ func main() {
 	}()
 
 	consulConn := consul.NewConsulConn(logger, cfg)
-	consulConn.Connect()
+	consulClient := consulConn.Connect()
 
 	// Handle OS signal để deregister
 	quit := make(chan os.Signal, 1)
@@ -66,17 +68,19 @@ func main() {
 	}()
 	
 	c := cron.New(cron.WithSeconds())
-	classroomCollection := mongoClient.Database(cfg.MongoDB).Collection("classroom")
+	roomService := room.NewRoomService(consulClient)
+	userService := user.NewUserService(consulClient)
 	assginCollection := mongoClient.Database(cfg.MongoDB).Collection("assgin")
 	systemConfig := mongoClient.Database(cfg.MongoDB).Collection("system_config")
 	notification := mongoClient.Database(cfg.MongoDB).Collection("notification")
-	classroomRepository := room.NewRoomRepository(classroomCollection, assginCollection, systemConfig, notification)
-	classroomService := room.NewRoomService(classroomRepository)
-	classroomHandler := room.NewRoomHandler(classroomService)
+	leader := mongoClient.Database(cfg.MongoDB).Collection("leader")
+	classroomRepository := class.NewClassRepository(assginCollection, systemConfig, notification, leader)
+	classroomService := class.NewClassService(classroomRepository, roomService, userService)
+	classroomHandler := class.NewClassHandler(classroomService)
 
 	r := gin.Default()
 
-	room.RegisterRoutes(r, classroomHandler)
+	class.RegisterRoutes(r, classroomHandler)
 	_, err = c.AddFunc("0 0 0 * * *", func() {
 		log.Println("🔄 Cron master running...")
 		ctx := context.WithValue(context.Background(), constants.TokenKey, os.Getenv("CRON_SERVICE_TOKEN"))
