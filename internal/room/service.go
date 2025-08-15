@@ -92,7 +92,7 @@ func (s *roomService) GetAllRooms(ctx context.Context) ([]*RoomInfor, error) {
 
 func (c *callAPI) getAllRooms(token string) ([]map[string]interface{}, error) {
 
-	endpoint := "/api/v1/locations?type=class"
+	endpoint := "/api/v1/storage?type=class"
 
 	headers := map[string]string{
 		"Content-Type":  "application/json",
