@@ -9,13 +9,16 @@ import (
 	"classroom-service/pkg/consul"
 	"classroom-service/pkg/zap"
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -55,18 +58,16 @@ func main() {
 
 	consulConn := consul.NewConsulConn(logger, cfg)
 	consulClient := consulConn.Connect()
+	defer consulConn.Deregister() 
 
-	// Handle OS signal để deregister
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	if err := waitPassing(consulClient, "go-main-service", 60*time.Second); err != nil {
+		logger.Fatalf("Dependency not ready: %v", err)
+	}
 
-	go func() {
-		<-quit
-		log.Println("Shutting down server... De-registering from Consul...")
-		consulConn.Deregister()
-		os.Exit(0)
-	}()
-	
+	if err := waitPassing(consulClient, "inventory-service", 60*time.Second); err != nil {
+		logger.Fatalf("Dependency not ready: %v", err)
+	}
+
 	c := cron.New(cron.WithSeconds())
 	roomService := room.NewRoomService(consulClient)
 	userService := user.NewUserService(consulClient)
@@ -79,8 +80,8 @@ func main() {
 	classroomHandler := class.NewClassHandler(classroomService)
 
 	r := gin.Default()
-
 	class.RegisterRoutes(r, classroomHandler)
+
 	_, err = c.AddFunc("0 0 0 * * *", func() {
 		log.Println("🔄 Cron master running...")
 		ctx := context.WithValue(context.Background(), constants.TokenKey, os.Getenv("CRON_SERVICE_TOKEN"))
@@ -100,9 +101,31 @@ func main() {
 		port = "8010"
 	}
 
-	log.Printf("Server starting on port %s", port)
-	if err := r.Run(":" + port); err != nil {
-		log.Fatalf("Server stopped with error: %v", err)
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+	}
+
+	go func() {
+		log.Printf("Server starting on port %s", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server stopped with error: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	} else {
+		log.Println("Server gracefully stopped")
 	}
 }
 
@@ -123,4 +146,16 @@ func connectToMongoDB(uri string) (*mongo.Client, error) {
 
 	log.Println("Successfully connected to MongoDB")
 	return client, nil
+}
+
+func waitPassing(cli *consulapi.Client, name string, timeout time.Duration) error {
+	dl := time.Now().Add(timeout)
+	for time.Now().Before(dl) {
+		entries, _, err := cli.Health().Service(name, "", true, nil)
+		if err == nil && len(entries) > 0 {
+			return nil 
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return fmt.Errorf("%s not ready in consul", name)
 }
