@@ -12,7 +12,7 @@ import (
 )
 
 type RoomService interface {
-	GetAllRooms(ctx context.Context) ([]*RoomInfor, error)
+	GetRoomByID(ctx context.Context, id string) (*RoomInfor, error)
 }
 
 type roomService struct {
@@ -59,40 +59,33 @@ func NewServiceAPI(client *api.Client, serviceName string) *callAPI {
 	}
 }
 
-func (s *roomService) GetAllRooms(ctx context.Context) ([]*RoomInfor, error) {
-
+func (s *roomService) GetRoomByID(ctx context.Context, id string) (*RoomInfor, error) {
 	token, ok := ctx.Value(constants.TokenKey).(string)
 	if !ok {
 		return nil, fmt.Errorf("token not found in context")
 	}
 
-	data, err := s.client.getAllRooms(token)
+	data, err := s.client.getRoomByID(token, id)
 	if err != nil {
 		return nil, err
 	}
 
 	if data == nil {
-		return nil, fmt.Errorf("no room data found")
+		return nil, fmt.Errorf("room not found")
 	}
 
-	rooms := make([]*RoomInfor, 0, len(data))
-	for _, item := range data {
-		id, _ := item["id"].(string)
-		name, _ := item["name"].(string)
-
-		rooms = append(rooms, &RoomInfor{
-			ID:   id,
-			Name: name,
-		})
+	room := &RoomInfor{
+		ID:   data["id"].(string),
+		Name: data["name"].(string),
 	}
 
-	return rooms, nil
-
+	return room, nil
 }
 
-func (c *callAPI) getAllRooms(token string) ([]map[string]interface{}, error) {
 
-	endpoint := "/api/v1/storage?type=class"
+func (c *callAPI) getRoomByID(token, id string) (map[string]interface{}, error) {
+
+	endpoint := fmt.Sprintf("/api/v1/storage/%s", id)
 
 	headers := map[string]string{
 		"Content-Type":  "application/json",
@@ -109,18 +102,11 @@ func (c *callAPI) getAllRooms(token string) ([]map[string]interface{}, error) {
 		return nil, err
 	}
 
-	dataListRaw, ok := parse["data"].([]interface{})
+	dataRaw, ok := parse["data"].(map[string]interface{})
 	if !ok {
-		fmt.Printf("Error calling API: %v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("unexpected response format")
 	}
 
-	rooms := make([]map[string]interface{}, 0)
-
-	for _, item := range dataListRaw {
-		rooms = append(rooms, item.(map[string]interface{}))
-	}
-
-	return rooms, nil
-
+	return dataRaw, nil
 }
+

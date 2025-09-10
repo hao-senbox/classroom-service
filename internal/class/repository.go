@@ -10,6 +10,7 @@ import (
 )
 
 type ClassRepository interface {
+	CreateClass(ctx context.Context, classroom *ClassRoom) error
 	CreateManyAssignments(ctx context.Context, assignments []*TeacherStudentAssignment) error
 	GetAssgins(ctx context.Context) ([]*TeacherStudentAssignment, error)
 	GetAssgin(ctx context.Context, id primitive.ObjectID) (*TeacherStudentAssignment, error)
@@ -35,15 +36,22 @@ type classRepository struct {
 	systemConfigCollection *mongo.Collection
 	notificationCollection *mongo.Collection
 	leaderCollection       *mongo.Collection
+	classCollection        *mongo.Collection
 }
 
-func NewClassRepository(assginCollection, systemConfigCollection, notificationCollection, leaderCollection *mongo.Collection) ClassRepository {
+func NewClassRepository(assginCollection, systemConfigCollection, notificationCollection, leaderCollection, classCollection *mongo.Collection) ClassRepository {
 	return &classRepository{
 		assginCollection:       assginCollection,
 		systemConfigCollection: systemConfigCollection,
 		notificationCollection: notificationCollection,
 		leaderCollection:       leaderCollection,
+		classCollection:        classCollection,
 	}
+}
+
+func (r *classRepository) CreateClass(ctx context.Context, classroom *ClassRoom) error {
+	_, err := r.classCollection.InsertOne(ctx, classroom)
+	return err
 }
 
 func (r *classRepository) GetAssgins(ctx context.Context) ([]*TeacherStudentAssignment, error) {

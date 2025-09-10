@@ -14,6 +14,7 @@ import (
 )
 
 type ClassService interface {
+	CreateClass(ctx context.Context, request *CreateClassRequest, userID string) (string, error)
 	GetClasses(ctx context.Context, date string) ([]*ClassRoomResponse, error)
 	AddLeader(ctx context.Context, request *AddLeaderRequest) error
 	GetAssgins(ctx context.Context) ([]*TeacherStudentAssignment, error)
@@ -44,17 +45,78 @@ func NewClassService(repo ClassRepository,
 	}
 }
 
+func (r *classService) CreateClass(ctx context.Context, request *CreateClassRequest, userID string) (string, error) {
+
+	var locationID *primitive.ObjectID
+
+	if request.LocationID != nil {
+		obj, err := primitive.ObjectIDFromHex(*request.LocationID)
+		if err != nil {
+			return "", err
+		}
+		locationID = &obj
+	} else {
+		locationID = nil
+	}
+
+	if request.Name == "" {
+		return "", errors.New("name is required")
+	}
+
+	classroomID := primitive.NewObjectID()
+
+	data := &ClassRoom{
+		ID:          classroomID,
+		Name:        request.Name,
+		Description: request.Description,
+		LocationID:  locationID,
+		IsActive:    true,
+		CreatedBy:   userID,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	err := r.repo.CreateClass(ctx, data)
+	if err != nil {
+		return "", err
+	}
+
+	var assignsFromDB []*TeacherStudentAssignment
+
+	for i := 1; i <= 15; i++ {
+		assign := &TeacherStudentAssignment{
+			ID:             primitive.NewObjectID(),
+			Index:          i,
+			ClassRoomID:    classroomID,
+			TeacherID:      nil,
+			StudentID:      nil,
+			CreatedBy:      "system",
+			IsNotification: false,
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
+		}
+		assignsFromDB = append(assignsFromDB, assign)
+	}
+
+	if err := r.repo.CreateManyAssignments(ctx, assignsFromDB); err != nil {
+		return "", err
+	}
+
+	return data.ID.Hex(), nil
+
+}
+
 func (r *classService) GetClasses(ctx context.Context, date string) ([]*ClassRoomResponse, error) {
 
 	var data []*ClassRoomResponse
 
-	var timeParse *time.Time
+	var timeParse time.Time
 	if date != "" {
 		t, err := time.Parse("2006-01-02", date)
 		if err != nil {
 			return nil, err
 		}
-		timeParse = &t
+		timeParse = t
 	}
 
 	rooms, err := r.roomService.GetAllRooms(ctx)
@@ -68,7 +130,7 @@ func (r *classService) GetClasses(ctx context.Context, date string) ([]*ClassRoo
 			return nil, err
 		}
 
-		exists, err := r.repo.GetAssignmentsByClassID(ctx, objID, timeParse)
+		exists, err := r.repo.GetAssignmentsByClassID(ctx, objID, &timeParse)
 		if err != nil {
 			return nil, err
 		}
@@ -93,7 +155,7 @@ func (r *classService) GetClasses(ctx context.Context, date string) ([]*ClassRoo
 				return nil, err
 			}
 		} else {
-			assignsFromDB, err = r.repo.GetAssignmentsByClass(ctx, objID, timeParse)
+			assignsFromDB, err = r.repo.GetAssignmentsByClass(ctx, objID, &timeParse)
 			if err != nil {
 				return nil, err
 			}
@@ -129,8 +191,8 @@ func (r *classService) GetClasses(ctx context.Context, date string) ([]*ClassRoo
 				Student:        studentInfo,
 				CreatedBy:      assign.CreatedBy,
 				IsNotification: assign.IsNotification,
-				CreatedAt:      assign.CreatedAt,
-				UpdatedAt:      assign.UpdatedAt,
+				CreatedAt:      &assign.CreatedAt,
+				UpdatedAt:      &assign.UpdatedAt,
 			})
 		}
 
@@ -262,8 +324,8 @@ func (r *classService) GetAssgin(ctx context.Context, id, index, date string) (*
 		Student:        studentInfo,
 		CreatedBy:      assign.CreatedBy,
 		IsNotification: assign.IsNotification,
-		CreatedAt:      assign.CreatedAt,
-		UpdatedAt:      assign.UpdatedAt,
+		CreatedAt:      &assign.CreatedAt,
+		UpdatedAt:      &assign.UpdatedAt,
 	}, nil
 
 }
@@ -329,7 +391,7 @@ func (r *classService) CreateAssgin(ctx context.Context, request *UpdateAssginRe
 	}
 
 	now := time.Now()
-	assign.UpdatedAt = &now
+	assign.UpdatedAt = now
 
 	return r.repo.UpdateAssgin(ctx, assignID, assign)
 }
@@ -431,7 +493,7 @@ func (r *classService) CronNotifications(ctx context.Context) error {
 		fmt.Printf("NotifyAt:  %v\n", notifyAt)
 		fmt.Printf("Now:       %v\n", now)
 
-		if now.After(*assign.CreatedAt) && now.Before(notifyAt) {
+		if now.After(assign.CreatedAt) && now.Before(notifyAt) {
 			fmt.Println("✅ Bây giờ nằm TRONG khoảng: Tạo notification")
 
 			err := r.repo.CreateNotification(ctx, &Notification{
@@ -458,7 +520,7 @@ func (r *classService) CronNotifications(ctx context.Context) error {
 				CreatedBy:      assign.CreatedBy,
 				IsNotification: true,
 				CreatedAt:      assign.CreatedAt,
-				UpdatedAt:      &now,
+				UpdatedAt:      now,
 			})
 			if err != nil {
 				return err

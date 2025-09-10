@@ -9,6 +9,7 @@ import (
 func RegisterRoutes(r *gin.Engine, handler *ClassHandler) {
 	class := r.Group("api/v1/room").Use(middleware.Secured())
 	{
+		class.POST("", handler.CreateClass)
 		class.GET("", handler.GetClasses)
 		class.PUT("/add/leader", handler.AddLeader)
 	}

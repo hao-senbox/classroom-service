@@ -2,10 +2,11 @@ package main
 
 import (
 	"classroom-service/config"
-	"classroom-service/internal/class"
+	"classroom-service/internal/assign"
+	"classroom-service/internal/classroom"
+	"classroom-service/internal/region"
 	"classroom-service/internal/room"
 	"classroom-service/internal/user"
-	"classroom-service/pkg/constants"
 	"classroom-service/pkg/consul"
 	"classroom-service/pkg/zap"
 	"context"
@@ -20,7 +21,6 @@ import (
 	"github.com/gin-gonic/gin"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/joho/godotenv"
-	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -58,7 +58,7 @@ func main() {
 
 	consulConn := consul.NewConsulConn(logger, cfg)
 	consulClient := consulConn.Connect()
-	defer consulConn.Deregister() 
+	defer consulConn.Deregister()
 
 	if err := waitPassing(consulClient, "go-main-service", 60*time.Second); err != nil {
 		logger.Fatalf("Dependency not ready: %v", err)
@@ -68,33 +68,54 @@ func main() {
 		logger.Fatalf("Dependency not ready: %v", err)
 	}
 
-	c := cron.New(cron.WithSeconds())
+	// c := cron.New(cron.WithSeconds())
+	// assginCollection := mongoClient.Database(cfg.MongoDB).Collection("assgin")
+	// systemConfig := mongoClient.Database(cfg.MongoDB).Collection("system_config")
+	// notification := mongoClient.Database(cfg.MongoDB).Collection("notification")
+	// classCollection := mongoClient.Database(cfg.MongoDB).Collection("classroom")
+	// leader := mongoClient.Database(cfg.MongoDB).Collection("leader")
+
 	roomService := room.NewRoomService(consulClient)
 	userService := user.NewUserService(consulClient)
-	assginCollection := mongoClient.Database(cfg.MongoDB).Collection("assgin")
-	systemConfig := mongoClient.Database(cfg.MongoDB).Collection("system_config")
-	notification := mongoClient.Database(cfg.MongoDB).Collection("notification")
-	leader := mongoClient.Database(cfg.MongoDB).Collection("leader")
-	classroomRepository := class.NewClassRepository(assginCollection, systemConfig, notification, leader)
-	classroomService := class.NewClassService(classroomRepository, roomService, userService)
-	classroomHandler := class.NewClassHandler(classroomService)
+
+	regionCollection := mongoClient.Database(cfg.MongoDB).Collection("region")
+	classroomCollection := mongoClient.Database(cfg.MongoDB).Collection("classroom")
+	assignCollection := mongoClient.Database(cfg.MongoDB).Collection("assign")
+
+	assignRepository := assign.NewAssignRepository(assignCollection)
+	assignService := assign.NewAssignService(assignRepository)
+	assignHandler := assign.NewAssignHandler(assignService)
+
+	classroomRepository := classroom.NewClassroomRepository(classroomCollection)
+	classroomService := classroom.NewClassroomService(classroomRepository, assignRepository)
+	classroomHandler := classroom.NewClassroomHandler(classroomService)
+
+	regionRepository := region.NewRegionRepository(regionCollection)
+	regionService := region.NewRegionService(regionRepository, classroomRepository, assignRepository, userService, roomService)
+	regionHandler := region.NewRegionHandler(regionService)
+
+	// classroomRepository := class.NewClassRepository(assginCollection, systemConfig, notification, leader, classCollection)
+	// classroomService := class.NewClassService(classroomRepository, roomService, userService)
+	// classroomHandler := class.NewClassHandler(classroomService)
 
 	r := gin.Default()
-	class.RegisterRoutes(r, classroomHandler)
+	assign.RegisterRoutes(r, assignHandler)
+	classroom.RegisterRoutes(r, classroomHandler)
+	region.RegisterRoutes(r, regionHandler)
 
-	_, err = c.AddFunc("0 0 0 * * *", func() {
-		log.Println("🔄 Cron master running...")
-		ctx := context.WithValue(context.Background(), constants.TokenKey, os.Getenv("CRON_SERVICE_TOKEN"))
-		if err := classroomService.CronNotifications(ctx); err != nil {
-			log.Printf("CronEventNotifications failed: %v", err)
-		}
-	})
-	if err != nil {
-		log.Fatalf("AddFunc error: %v", err)
-	}
+	// _, err = c.AddFunc("0 0 0 * * *", func() {
+	// 	log.Println("🔄 Cron master running...")
+	// 	ctx := context.WithValue(context.Background(), constants.TokenKey, os.Getenv("CRON_SERVICE_TOKEN"))
+	// 	if err := classroomService.CronNotifications(ctx); err != nil {
+	// 		log.Printf("CronEventNotifications failed: %v", err)
+	// 	}
+	// })
+	// if err != nil {
+	// 	log.Fatalf("AddFunc error: %v", err)
+	// }
 
-	c.Start()
-	defer c.Stop()
+	// c.Start()
+	// defer c.Stop()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -153,7 +174,7 @@ func waitPassing(cli *consulapi.Client, name string, timeout time.Duration) erro
 	for time.Now().Before(dl) {
 		entries, _, err := cli.Health().Service(name, "", true, nil)
 		if err == nil && len(entries) > 0 {
-			return nil 
+			return nil
 		}
 		time.Sleep(2 * time.Second)
 	}
