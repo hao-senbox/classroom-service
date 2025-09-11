@@ -7,7 +7,7 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, handler *ClassroomHandler) {
-	classroomGroup := r.Group("/api/v1/classroom", middleware.Secured())
+	classroomGroup := r.Group("/api/v1/classrooms", middleware.Secured())
 	{
 		classroomGroup.POST("", handler.CreateClassroom)
 		// classroomGroup.GET("", handler.GetClassrooms)

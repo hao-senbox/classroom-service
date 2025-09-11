@@ -22,7 +22,7 @@ type SlotAssignmentResponse struct {
 type ClassRoomResponse struct {
 	ID          primitive.ObjectID  `json:"id"`
 	RegionID    *primitive.ObjectID `json:"region_id"`
-	Name        string              `json:"name"`
+	Name        string              `json:"region_name"`
 	Description string              `json:"description"`
 	Icon        string              `json:"icon"`
 	Note        string              `json:"note"`

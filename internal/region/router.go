@@ -7,7 +7,7 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, handler *RegionHandler) {
-	regionGroup := r.Group("/api/v1/classroom/region", middleware.Secured())
+	regionGroup := r.Group("/api/v1/classrooms/regions", middleware.Secured())
 	{
 		regionGroup.POST("", handler.CreateRegion)
 		regionGroup.GET("", handler.GetRegions)
