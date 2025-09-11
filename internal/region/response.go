@@ -26,16 +26,16 @@ type ClassRoomResponse struct {
 	Description string              `json:"description"`
 	Icon        string              `json:"icon"`
 	Note        string              `json:"note"`
-	Room        *room.RoomInfor     `json:"room,omitempty"`
+	Room        *room.RoomInfor     `json:"location,omitempty"`
+	Leader      *user.UserInfor     `json:"leader,omitempty"`
 	IsActive    bool                `json:"is_active"`
 	CreatedBy   string              `json:"created_by"`
 	CreatedAt   time.Time           `json:"created_at"`
 	UpdatedAt   time.Time           `json:"updated_at"`
 
-	
-	TotalSlots     int `json:"total_slots"`     
-	AssignedSlots  int `json:"assigned_slots"`  
-	AvailableSlots int `json:"available_slots"` 
+	TotalSlots     int `json:"total_slots"`
+	AssignedSlots  int `json:"assigned_slots"`
+	AvailableSlots int `json:"available_slots"`
 
 	RecentAssignments []*SlotAssignmentResponse `json:"recent_assignments"`
 }

@@ -4,6 +4,7 @@ import (
 	"classroom-service/config"
 	"classroom-service/internal/assign"
 	"classroom-service/internal/classroom"
+	"classroom-service/internal/leader"
 	"classroom-service/internal/region"
 	"classroom-service/internal/room"
 	"classroom-service/internal/user"
@@ -81,6 +82,11 @@ func main() {
 	regionCollection := mongoClient.Database(cfg.MongoDB).Collection("region")
 	classroomCollection := mongoClient.Database(cfg.MongoDB).Collection("classroom")
 	assignCollection := mongoClient.Database(cfg.MongoDB).Collection("assign")
+	leaderCollection := mongoClient.Database(cfg.MongoDB).Collection("leader")
+
+	leaderRepository := leader.NewLeaderRepository(leaderCollection)
+	leaderService := leader.NewLeaderService(leaderRepository)
+	leaderHandler := leader.NewLeaderHandler(leaderService)
 
 	assignRepository := assign.NewAssignRepository(assignCollection)
 	assignService := assign.NewAssignService(assignRepository)
@@ -91,7 +97,7 @@ func main() {
 	classroomHandler := classroom.NewClassroomHandler(classroomService)
 
 	regionRepository := region.NewRegionRepository(regionCollection)
-	regionService := region.NewRegionService(regionRepository, classroomRepository, assignRepository, userService, roomService)
+	regionService := region.NewRegionService(regionRepository, classroomRepository, assignRepository, userService, roomService, leaderRepository)
 	regionHandler := region.NewRegionHandler(regionService)
 
 	// classroomRepository := class.NewClassRepository(assginCollection, systemConfig, notification, leader, classCollection)
@@ -99,6 +105,8 @@ func main() {
 	// classroomHandler := class.NewClassHandler(classroomService)
 
 	r := gin.Default()
+
+	leader.RegisterRoutes(r, leaderHandler)
 	assign.RegisterRoutes(r, assignHandler)
 	classroom.RegisterRoutes(r, classroomHandler)
 	region.RegisterRoutes(r, regionHandler)

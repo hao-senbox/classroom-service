@@ -4,11 +4,13 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type LeaderRepository interface {
 	CreateLeader(ctx context.Context, leader *Leader) error
+	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) (*Leader, error)
 }
 
 type leaderRepository struct {
@@ -38,4 +40,23 @@ func (r *leaderRepository) CreateLeader(ctx context.Context, leader *Leader) err
 	}
 
 	return nil
+}
+
+func (r *leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) (*Leader, error) {
+
+	filter := bson.M{
+		"class_room_id": classroomID,
+	}
+
+	var leader Leader
+	err := r.leaderCollection.FindOne(ctx, filter).Decode(&leader)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &leader, nil
+	
 }

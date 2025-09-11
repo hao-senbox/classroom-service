@@ -3,6 +3,7 @@ package region
 import (
 	"classroom-service/internal/assign"
 	"classroom-service/internal/classroom"
+	"classroom-service/internal/leader"
 	"classroom-service/internal/room"
 	"classroom-service/internal/user"
 	"context"
@@ -26,19 +27,22 @@ type regionService struct {
 	AssignRepository    assign.AssignRepository
 	UserService         user.UserService
 	RoomService         room.RoomService
+	LeaderRepository    leader.LeaderRepository
 }
 
 func NewRegionService(regionRepository RegionRepository,
 	classroomRepository classroom.ClassroomRepository,
 	assignRepository assign.AssignRepository,
 	userService user.UserService,
-	roomService room.RoomService) RegionService {
+	roomService room.RoomService,
+	leaderRepository leader.LeaderRepository) RegionService {
 	return &regionService{
 		RegionRepository:    regionRepository,
 		ClassroomRepository: classroomRepository,
 		AssignRepository:    assignRepository,
 		UserService:         userService,
 		RoomService:         roomService,
+		LeaderRepository:    leaderRepository,
 	}
 }
 
@@ -100,8 +104,7 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 			return nil, err
 		}
 
-		var classroomResponses []*ClassRoomResponse
-
+		classroomResponses := make([]*ClassRoomResponse, 0)
 		for _, classroom := range classrooms {
 			var roomInfor *room.RoomInfor
 			if classroom.LocationID != nil {
@@ -113,6 +116,27 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 						ID:   classroom.LocationID.Hex(),
 						Name: "Deleted",
 					}
+				}
+			}
+
+			leader, err := r.LeaderRepository.GetLeaderByClassID(ctx, classroom.ID)
+			if err != nil {
+				return nil, err
+			}
+			var leaderInfor *user.UserInfor
+			if leader != nil {
+				leaderInforData, err := r.UserService.GetUserInfor(ctx, leader.UserID)
+				if err != nil {
+					return nil, err
+				}
+				leaderInfor = &user.UserInfor{
+					UserID:   leaderInforData.UserID,
+					UserName: leaderInforData.UserName,
+				}
+			} else {
+				leaderInfor = &user.UserInfor{
+					UserID:   "",
+					UserName: "",
 				}
 			}
 
@@ -169,6 +193,7 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 				Icon:              getStringValue(classroom.Icon),
 				Note:              getStringValue(classroom.Note),
 				Room:              roomInfor,
+				Leader:            leaderInfor,
 				IsActive:          classroom.IsActive,
 				CreatedBy:         classroom.CreatedBy,
 				CreatedAt:         classroom.CreatedAt,
