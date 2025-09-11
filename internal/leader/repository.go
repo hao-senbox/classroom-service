@@ -3,6 +3,7 @@ package leader
 import (
 	"context"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -21,9 +22,20 @@ func NewLeaderRepository(leaderCollection *mongo.Collection) LeaderRepository {
 }
 
 func (r *leaderRepository) CreateLeader(ctx context.Context, leader *Leader) error {
-	_, err := r.leaderCollection.InsertOne(ctx, leader)
+
+	filter := bson.M{
+		"class_room_id": leader.ClassRoomID,
+	}
+
+	_, err := r.leaderCollection.DeleteMany(ctx, filter)
 	if err != nil {
 		return err
 	}
+
+	_, err = r.leaderCollection.InsertOne(ctx, leader)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

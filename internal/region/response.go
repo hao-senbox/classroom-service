@@ -22,7 +22,7 @@ type SlotAssignmentResponse struct {
 type ClassRoomResponse struct {
 	ID          primitive.ObjectID  `json:"id"`
 	RegionID    *primitive.ObjectID `json:"region_id"`
-	Name        string              `json:"region_name"`
+	Name        string              `json:"classroom_name"`
 	Description string              `json:"description"`
 	Icon        string              `json:"icon"`
 	Note        string              `json:"note"`
@@ -37,12 +37,12 @@ type ClassRoomResponse struct {
 	AssignedSlots  int `json:"assigned_slots"`  
 	AvailableSlots int `json:"available_slots"` 
 
-	RecentAssignments []*SlotAssignmentResponse `json:"recent_assignments,omitempty"`
+	RecentAssignments []*SlotAssignmentResponse `json:"recent_assignments"`
 }
 
 type RegionResponse struct {
 	ID         primitive.ObjectID   `json:"id"`
-	Name       string               `json:"name"`
+	Name       string               `json:"region_name"`
 	Classrooms []*ClassRoomResponse `json:"classrooms"`
 	CreatedBy  string               `json:"created_by"`
 	CreatedAt  time.Time            `json:"created_at"`

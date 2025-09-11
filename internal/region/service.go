@@ -121,10 +121,10 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 				return nil, err
 			}
 
-			var assignmentResponses []*SlotAssignmentResponse
+			assignmentResponses := make([]*SlotAssignmentResponse, 0)
 			for _, assignment := range allAssignments {
 				assignmentID := assignment.ID.Hex()
-				
+
 				assignmentResp := &SlotAssignmentResponse{
 					SlotNumber:     assignment.SlotNumber,
 					AssignmentID:   &assignmentID,
@@ -176,7 +176,7 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 				TotalSlots:        15,
 				AssignedSlots:     len(assignmentResponses),
 				AvailableSlots:    15 - len(assignmentResponses),
-				RecentAssignments: assignmentResponses, 
+				RecentAssignments: assignmentResponses,
 			}
 
 			classroomResponses = append(classroomResponses, classroomResp)
