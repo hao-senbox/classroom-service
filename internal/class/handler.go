@@ -54,27 +54,7 @@ func (h *ClassHandler) CreateClass(c *gin.Context) {
 	helper.SendSuccess(c, http.StatusOK, "Success", id)
 }
 
-func (h *ClassHandler) GetClasses(c *gin.Context) {
 
-	date := c.Query("date")
-
-	tokenString, exist := c.Get(constants.Token)
-	if !exist {
-		helper.SendError(c, http.StatusUnauthorized, errors.New("unauthorized"), "UNAUTHORIZED")
-		return
-	}
-
-	ctx := context.WithValue(c, constants.TokenKey, tokenString)
-
-	rooms, err := h.ClassService.GetClasses(ctx, date)
-
-	if err != nil {
-		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
-		return
-	}
-
-	helper.SendSuccess(c, http.StatusOK, "Success", rooms)
-}
 
 func (h *ClassHandler) AddLeader(c *gin.Context) {
 

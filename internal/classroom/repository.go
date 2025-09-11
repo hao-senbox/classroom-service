@@ -11,6 +11,7 @@ import (
 type ClassroomRepository interface {
 	CreateClassroom(ctx context.Context, data *ClassRoom) error
 	GetClassroomByRegion(ctx context.Context, regionID primitive.ObjectID) ([]*ClassRoom, error)
+	GetClassroomByID(ctx context.Context, classroomID primitive.ObjectID) (*ClassRoom, error)
 }
 
 type classroomRepository struct {
@@ -53,4 +54,17 @@ func (c *classroomRepository) GetClassroomByRegion(ctx context.Context, regionID
 
 	return classrooms, nil
 
+}
+
+func (c *classroomRepository) GetClassroomByID(ctx context.Context, classroomID primitive.ObjectID) (*ClassRoom, error) {
+
+	var classroom ClassRoom
+
+	err := c.classroomCollection.FindOne(ctx, bson.M{"_id": classroomID}).Decode(&classroom)
+	if err != nil {
+		return nil, err
+	}
+
+	return &classroom, nil
+	
 }

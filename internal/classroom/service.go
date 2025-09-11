@@ -2,6 +2,7 @@ package classroom
 
 import (
 	"classroom-service/internal/assign"
+	"classroom-service/internal/user"
 	"context"
 	"errors"
 	"time"
@@ -11,18 +12,22 @@ import (
 
 type ClassroomService interface {
 	CreateClassroom(ctx context.Context, req *CreateClassroomRequest, userID string) (string, error)
+	GetClassroomsByUserID(ctx context.Context, userID string) ([]string, error)
 }
 
 type classroomService struct {
 	ClassroomRepository ClassroomRepository
 	AssignRepository    assign.AssignRepository
+	UserService         user.UserService
 }
 
 func NewClassroomService(classroomRepository ClassroomRepository,
-	assignRepository assign.AssignRepository) ClassroomService {
+	assignRepository assign.AssignRepository,
+	userService user.UserService) ClassroomService {
 	return &classroomService{
 		ClassroomRepository: classroomRepository,
 		AssignRepository:    assignRepository,
+		UserService:         userService,
 	}
 }
 
@@ -81,26 +86,10 @@ func (s *classroomService) CreateClassroom(ctx context.Context, req *CreateClass
 		return "", err
 	}
 
-	var assignsFromDB []*assign.TeacherStudentAssignment
-
-	for i := 1; i <= 15; i++ {
-		assign := &assign.TeacherStudentAssignment{
-			ID:             primitive.NewObjectID(),
-			ClassRoomID:    ClassroomID,
-			TeacherID:      nil,
-			StudentID:      nil,
-			CreatedBy:      userID,
-			IsNotification: false,
-			CreatedAt:      time.Now(),
-			UpdatedAt:      time.Now(),
-		}
-		assignsFromDB = append(assignsFromDB, assign)
-	}
-
-	if err := s.AssignRepository.CreateManyAssignments(ctx, assignsFromDB); err != nil {
-		return "", err
-	}
-
 	return ClassroomID.Hex(), nil
 
+}
+
+func (s *classroomService) GetClassroomsByUserID(ctx context.Context, userID string) ([]string, error) {
+	return []string{}, nil
 }

@@ -15,4 +15,8 @@ func RegisterRoutes(r *gin.Engine, handler *ClassroomHandler) {
 		// classroomGroup.PUT("/:id", handler.UpdateClassroom)
 		// classroomGroup.DELETE("/:id", handler.DeleteClassroom)
 	}
+	apiGatewayClassroomGroup := r.Group("/api/v1/gateway", middleware.Secured())
+	{
+		apiGatewayClassroomGroup.GET("/classroom", handler.GetClassroomsByUserID)
+	}
 }

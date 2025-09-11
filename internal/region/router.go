@@ -11,7 +11,7 @@ func RegisterRoutes(r *gin.Engine, handler *RegionHandler) {
 	{
 		regionGroup.POST("", handler.CreateRegion)
 		regionGroup.GET("", handler.GetRegions)
-		regionGroup.GET("/:id", handler.GetRegion)
+		// regionGroup.GET("/:id", handler.GetRegion)
 		regionGroup.PUT("/:id", handler.UpdateRegion)
 		regionGroup.DELETE("/:id", handler.DeleteRegion)
 	}

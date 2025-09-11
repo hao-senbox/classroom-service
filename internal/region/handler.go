@@ -57,6 +57,18 @@ func (h *RegionHandler) CreateRegion(c *gin.Context) {
 
 func (h *RegionHandler) GetRegions(c *gin.Context) {
 
+	organizationID := c.Query("organization_id")
+	if organizationID == "" {
+		helper.SendError(c, http.StatusBadRequest, errors.New("organization_id is required"), "INVALID_REQUEST")
+		return
+	}
+
+	date := c.Query("date")
+	if date == "" {
+		helper.SendError(c, http.StatusBadRequest, errors.New("date is required"), "INVALID_REQUEST")
+		return
+	}
+
 	tokenString, exist := c.Get(constants.Token)
 	if !exist {
 		helper.SendError(c, http.StatusUnauthorized, errors.New("unauthorized"), "UNAUTHORIZED")
@@ -65,7 +77,7 @@ func (h *RegionHandler) GetRegions(c *gin.Context) {
 
 	ctx := context.WithValue(c, constants.TokenKey, tokenString)
 
-	regions, err := h.RegionService.GetAllRegions(ctx)
+	regions, err := h.RegionService.GetAllRegions(ctx, organizationID, date)
 
 	if err != nil {
 		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
@@ -76,32 +88,32 @@ func (h *RegionHandler) GetRegions(c *gin.Context) {
 
 }
 
-func (h *RegionHandler) GetRegion(c *gin.Context) {
+// func (h *RegionHandler) GetRegion(c *gin.Context) {
 
-	id := c.Param("id")
-	if id == "" {
-		helper.SendError(c, http.StatusBadRequest, errors.New("id is required"), "INVALID_REQUEST")
-		return
-	}
+// 	id := c.Param("id")
+// 	if id == "" {
+// 		helper.SendError(c, http.StatusBadRequest, errors.New("id is required"), "INVALID_REQUEST")
+// 		return
+// 	}
 
-	tokenString, exist := c.Get(constants.Token)
-	if !exist {
-		helper.SendError(c, http.StatusUnauthorized, errors.New("unauthorized"), "UNAUTHORIZED")
-		return
-	}
+// 	tokenString, exist := c.Get(constants.Token)
+// 	if !exist {
+// 		helper.SendError(c, http.StatusUnauthorized, errors.New("unauthorized"), "UNAUTHORIZED")
+// 		return
+// 	}
 
-	ctx := context.WithValue(c, constants.TokenKey, tokenString)
+// 	ctx := context.WithValue(c, constants.TokenKey, tokenString)
 
-	region, err := h.RegionService.GetRegion(ctx, id)
+// 	region, err := h.RegionService.GetRegion(ctx, id)
 
-	if err != nil {
-		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
-		return
-	}
+// 	if err != nil {
+// 		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+// 		return
+// 	}
 
-	helper.SendSuccess(c, http.StatusOK, "Get Region Successfully", region)
+// 	helper.SendSuccess(c, http.StatusOK, "Get Region Successfully", region)
 
-}
+// }
 
 func (h *RegionHandler) UpdateRegion(c *gin.Context) {
 

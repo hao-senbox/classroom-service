@@ -14,8 +14,8 @@ import (
 
 type RegionService interface {
 	CreateRegion(ctx context.Context, req *CreateRegionRequest, userID string) (string, error)
-	GetAllRegions(ctx context.Context) ([]*RegionResponse, error)
-	GetRegion(ctx context.Context, id string) (*RegionResponse, error)
+	GetAllRegions(ctx context.Context, organizationID string, date string) ([]*RegionResponse, error)
+	// GetRegion(ctx context.Context, id string) (*RegionResponse, error)
 	UpdateRegion(ctx context.Context, id string, req *UpdateRegionRequest) error
 	DeleteRegion(ctx context.Context, id string) error
 }
@@ -52,14 +52,19 @@ func (r *regionService) CreateRegion(ctx context.Context, req *CreateRegionReque
 		return "", errors.New("user id is required")
 	}
 
+	if req.OrganizationID == "" {
+		return "", errors.New("organization id is required")
+	}
+
 	ID := primitive.NewObjectID()
 
 	data := &Region{
-		ID:        ID,
-		Name:      req.Name,
-		CreatedBy: userID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:             ID,
+		Name:           req.Name,
+		OrganizationID: req.OrganizationID,
+		CreatedBy:      userID,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	err := r.RegionRepository.CreateRegion(ctx, data)
@@ -71,9 +76,18 @@ func (r *regionService) CreateRegion(ctx context.Context, req *CreateRegionReque
 
 }
 
-func (r *regionService) GetAllRegions(ctx context.Context) ([]*RegionResponse, error) {
+func (r *regionService) GetAllRegions(ctx context.Context, organizationID string, date string) ([]*RegionResponse, error) {
 
-	regions, err := r.RegionRepository.GetRegions(ctx)
+	if date == "" {
+		return nil, errors.New("date is required")
+	}
+
+	dateParse, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return nil, err
+	}
+
+	regions, err := r.RegionRepository.GetRegions(ctx, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,89 +95,88 @@ func (r *regionService) GetAllRegions(ctx context.Context) ([]*RegionResponse, e
 	var responses []*RegionResponse
 
 	for _, region := range regions {
-
 		classrooms, err := r.ClassroomRepository.GetClassroomByRegion(ctx, region.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		var classroomResponses []ClassRoom
+		var classroomResponses []*ClassRoomResponse
 
 		for _, classroom := range classrooms {
-
-			var roomInfor room.RoomInfor
+			var roomInfor *room.RoomInfor
 			if classroom.LocationID != nil {
 				roomData, err := r.RoomService.GetRoomByID(ctx, classroom.LocationID.Hex())
 				if err == nil && roomData != nil {
-					roomInfor = *roomData
+					roomInfor = roomData
 				} else {
-					roomInfor = room.RoomInfor{
+					roomInfor = &room.RoomInfor{
 						ID:   classroom.LocationID.Hex(),
 						Name: "Deleted",
 					}
 				}
 			}
 
-			assignments, err := r.AssignRepository.GetAssignmentsByClassroomID(ctx, classroom.ID)
+			allAssignments, err := r.AssignRepository.GetAssignmentsByClassroomAndDate(ctx, classroom.ID, &dateParse)
 			if err != nil {
 				return nil, err
 			}
 
-			var assignmentResponses []*TeacherStudentAssignment
-			for _, a := range assignments {
+			var assignmentResponses []*SlotAssignmentResponse
+			for _, assignment := range allAssignments {
+				assignmentID := assignment.ID.Hex()
+				
+				assignmentResp := &SlotAssignmentResponse{
+					SlotNumber:     assignment.SlotNumber,
+					AssignmentID:   &assignmentID,
+					AssignmentDate: &assignment.AssignDate,
+					IsAssigned:     true,
+					CreatedAt:      &assignment.CreatedAt,
+					UpdatedAt:      &assignment.UpdatedAt,
+				}
 
-				var studentInfo user.UserInfor
-				if a.StudentID != nil && *a.StudentID != "" {
-					stu, err := r.UserService.GetStudentInfor(ctx, *a.StudentID)
-					if err == nil && stu != nil {
-						studentInfo = *stu
+				if assignment.TeacherID != nil && *assignment.TeacherID != "" {
+					teacherInfo, err := r.UserService.GetTeacherInfor(ctx, *assignment.TeacherID)
+					if err == nil && teacherInfo != nil {
+						assignmentResp.Teacher = teacherInfo
 					} else {
-						studentInfo = user.UserInfor{
-							UserID:   *a.StudentID,
+						assignmentResp.Teacher = &user.UserInfor{
+							UserID:   *assignment.TeacherID,
 							UserName: "Deleted",
 						}
 					}
 				}
 
-				var teacherInfo user.UserInfor
-				if a.TeacherID != nil && *a.TeacherID != "" {
-					tea, err := r.UserService.GetTeacherInfor(ctx, *a.TeacherID)
-					if err == nil && tea != nil {
-						teacherInfo = *tea
+				if assignment.StudentID != nil && *assignment.StudentID != "" {
+					studentInfo, err := r.UserService.GetStudentInfor(ctx, *assignment.StudentID)
+					if err == nil && studentInfo != nil {
+						assignmentResp.Student = studentInfo
 					} else {
-						teacherInfo = user.UserInfor{
-							UserID:   *a.TeacherID,
+						assignmentResp.Student = &user.UserInfor{
+							UserID:   *assignment.StudentID,
 							UserName: "Deleted",
 						}
 					}
 				}
 
-				assignmentResp := &TeacherStudentAssignment{
-					ID:             a.ID,
-					ClassRoomID:    a.ClassRoomID,
-					Teacher:        teacherInfo,
-					Student:        studentInfo,
-					CreatedBy:      a.CreatedBy,
-					IsNotification: a.IsNotification,
-					CreatedAt:      a.CreatedAt,
-					UpdatedAt:      a.UpdatedAt,
-				}
 				assignmentResponses = append(assignmentResponses, assignmentResp)
 			}
 
-			classroomResp := ClassRoom{
-				ID:          classroom.ID,
-				RegionID:    classroom.RegionID,
-				Name:        classroom.Name,
-				Description: classroom.Description,
-				Icon:        classroom.Icon,
-				Note:        classroom.Note,
-				Assignments: assignmentResponses,
-				Room:        roomInfor,
-				IsActive:    classroom.IsActive,
-				CreatedBy:   classroom.CreatedBy,
-				CreatedAt:   classroom.CreatedAt,
-				UpdatedAt:   classroom.UpdatedAt,
+			classroomResp := &ClassRoomResponse{
+				ID:                classroom.ID,
+				RegionID:          classroom.RegionID,
+				Name:              classroom.Name,
+				Description:       getStringValue(classroom.Description),
+				Icon:              getStringValue(classroom.Icon),
+				Note:              getStringValue(classroom.Note),
+				Room:              roomInfor,
+				IsActive:          classroom.IsActive,
+				CreatedBy:         classroom.CreatedBy,
+				CreatedAt:         classroom.CreatedAt,
+				UpdatedAt:         classroom.UpdatedAt,
+				TotalSlots:        15,
+				AssignedSlots:     len(assignmentResponses),
+				AvailableSlots:    15 - len(assignmentResponses),
+				RecentAssignments: assignmentResponses, 
 			}
 
 			classroomResponses = append(classroomResponses, classroomResp)
@@ -183,125 +196,132 @@ func (r *regionService) GetAllRegions(ctx context.Context) ([]*RegionResponse, e
 	return responses, nil
 }
 
-func (r *regionService) GetRegion(ctx context.Context, id string) (*RegionResponse, error) {
-
-	if id == "" {
-		return nil, errors.New("id is required")
+func getStringValue(s *string) string {
+	if s == nil {
+		return ""
 	}
-
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-
-	region, err := r.RegionRepository.GetRegion(ctx, objectID)
-	if err != nil {
-		return nil, err
-	}
-
-	if region == nil {
-		return nil, errors.New("region not found")
-	}
-
-	classrooms, err := r.ClassroomRepository.GetClassroomByRegion(ctx, region.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	var classroomResponses []ClassRoom
-
-	for _, classroom := range classrooms {
-
-		var roomInfor room.RoomInfor
-		if classroom.LocationID != nil {
-			roomData, err := r.RoomService.GetRoomByID(ctx, classroom.LocationID.Hex())
-			if err == nil && roomData != nil {
-				roomInfor = *roomData
-			} else {
-				roomInfor = room.RoomInfor{
-					ID:   classroom.LocationID.Hex(),
-					Name: "Deleted",
-				}
-			}
-		}
-
-		assignments, err := r.AssignRepository.GetAssignmentsByClassroomID(ctx, classroom.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		var assignmentResponses []*TeacherStudentAssignment
-		for _, a := range assignments {
-
-			var studentInfo user.UserInfor
-			if a.StudentID != nil && *a.StudentID != "" {
-				stu, err := r.UserService.GetStudentInfor(ctx, *a.StudentID)
-				if err == nil && stu != nil {
-					studentInfo = *stu
-				} else {
-					studentInfo = user.UserInfor{
-						UserID:   *a.StudentID,
-						UserName: "Deleted",
-					}
-				}
-			}
-
-			var teacherInfo user.UserInfor
-			if a.TeacherID != nil && *a.TeacherID != "" {
-				tea, err := r.UserService.GetTeacherInfor(ctx, *a.TeacherID)
-				if err == nil && tea != nil {
-					teacherInfo = *tea
-				} else {
-					teacherInfo = user.UserInfor{
-						UserID:   *a.TeacherID,
-						UserName: "Deleted",
-					}
-				}
-			}
-
-			assignmentResp := &TeacherStudentAssignment{
-				ID:             a.ID,
-				ClassRoomID:    a.ClassRoomID,
-				Teacher:        teacherInfo,
-				Student:        studentInfo,
-				CreatedBy:      a.CreatedBy,
-				IsNotification: a.IsNotification,
-				CreatedAt:      a.CreatedAt,
-				UpdatedAt:      a.UpdatedAt,
-			}
-			assignmentResponses = append(assignmentResponses, assignmentResp)
-		}
-
-		classroomResp := ClassRoom{
-			ID:          classroom.ID,
-			RegionID:    classroom.RegionID,
-			Name:        classroom.Name,
-			Description: classroom.Description,
-			Icon:        classroom.Icon,
-			Note:        classroom.Note,
-			Assignments: assignmentResponses,
-			Room:        roomInfor,
-			IsActive:    classroom.IsActive,
-			CreatedBy:   classroom.CreatedBy,
-			CreatedAt:   classroom.CreatedAt,
-			UpdatedAt:   classroom.UpdatedAt,
-		}
-
-		classroomResponses = append(classroomResponses, classroomResp)
-	}
-
-	res := &RegionResponse{
-		ID:         region.ID,
-		Name:       region.Name,
-		Classrooms: classroomResponses,
-		CreatedBy:  region.CreatedBy,
-		CreatedAt:  region.CreatedAt,
-		UpdatedAt:  region.UpdatedAt,
-	}
-
-	return res, nil
-
+	return *s
 }
+
+// func (r *regionService) GetRegion(ctx context.Context, id string) (*RegionResponse, error) {
+
+// 	if id == "" {
+// 		return nil, errors.New("id is required")
+// 	}
+
+// 	objectID, err := primitive.ObjectIDFromHex(id)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	region, err := r.RegionRepository.GetRegion(ctx, objectID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	if region == nil {
+// 		return nil, errors.New("region not found")
+// 	}
+
+// 	classrooms, err := r.ClassroomRepository.GetClassroomByRegion(ctx, region.ID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	var classroomResponses []ClassRoom
+
+// 	for _, classroom := range classrooms {
+
+// 		var roomInfor room.RoomInfor
+// 		if classroom.LocationID != nil {
+// 			roomData, err := r.RoomService.GetRoomByID(ctx, classroom.LocationID.Hex())
+// 			if err == nil && roomData != nil {
+// 				roomInfor = *roomData
+// 			} else {
+// 				roomInfor = room.RoomInfor{
+// 					ID:   classroom.LocationID.Hex(),
+// 					Name: "Deleted",
+// 				}
+// 			}
+// 		}
+
+// 		assignments, err := r.AssignRepository.GetAssignmentsByClassroomID(ctx, classroom.ID)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		var assignmentResponses []*TeacherStudentAssignment
+// 		for _, a := range assignments {
+
+// 			var studentInfo user.UserInfor
+// 			if a.StudentID != nil && *a.StudentID != "" {
+// 				stu, err := r.UserService.GetStudentInfor(ctx, *a.StudentID)
+// 				if err == nil && stu != nil {
+// 					studentInfo = *stu
+// 				} else {
+// 					studentInfo = user.UserInfor{
+// 						UserID:   *a.StudentID,
+// 						UserName: "Deleted",
+// 					}
+// 				}
+// 			}
+
+// 			var teacherInfo user.UserInfor
+// 			if a.TeacherID != nil && *a.TeacherID != "" {
+// 				tea, err := r.UserService.GetTeacherInfor(ctx, *a.TeacherID)
+// 				if err == nil && tea != nil {
+// 					teacherInfo = *tea
+// 				} else {
+// 					teacherInfo = user.UserInfor{
+// 						UserID:   *a.TeacherID,
+// 						UserName: "Deleted",
+// 					}
+// 				}
+// 			}
+
+// 			assignmentResp := &TeacherStudentAssignment{
+// 				ID:             a.ID,
+// 				ClassRoomID:    a.ClassRoomID,
+// 				Teacher:        teacherInfo,
+// 				Student:        studentInfo,
+// 				CreatedBy:      a.CreatedBy,
+// 				IsNotification: a.IsNotification,
+// 				CreatedAt:      a.CreatedAt,
+// 				UpdatedAt:      a.UpdatedAt,
+// 			}
+// 			assignmentResponses = append(assignmentResponses, assignmentResp)
+// 		}
+
+// 		classroomResp := ClassRoom{
+// 			ID:          classroom.ID,
+// 			RegionID:    classroom.RegionID,
+// 			Name:        classroom.Name,
+// 			Description: classroom.Description,
+// 			Icon:        classroom.Icon,
+// 			Note:        classroom.Note,
+// 			Assignments: assignmentResponses,
+// 			Room:        roomInfor,
+// 			IsActive:    classroom.IsActive,
+// 			CreatedBy:   classroom.CreatedBy,
+// 			CreatedAt:   classroom.CreatedAt,
+// 			UpdatedAt:   classroom.UpdatedAt,
+// 		}
+
+// 		classroomResponses = append(classroomResponses, classroomResp)
+// 	}
+
+// 	res := &RegionResponse{
+// 		ID:         region.ID,
+// 		Name:       region.Name,
+// 		Classrooms: classroomResponses,
+// 		CreatedBy:  region.CreatedBy,
+// 		CreatedAt:  region.CreatedAt,
+// 		UpdatedAt:  region.UpdatedAt,
+// 	}
+
+// 	return res, nil
+
+// }
 
 func (r *regionService) UpdateRegion(ctx context.Context, id string, req *UpdateRegionRequest) error {
 

@@ -1,13 +1,13 @@
 package user
 
 import (
+	"classroom-service/pkg/constants"
+	"classroom-service/pkg/consul"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"classroom-service/pkg/constants"
-	"classroom-service/pkg/consul"
 
 	"github.com/hashicorp/consul/api"
 )
@@ -184,6 +184,32 @@ func (u *userService) GetTeacherInfor(ctx context.Context, studentID string) (*U
 
 }
 
+func (u *userService) GetListTeacherInfor(ctx context.Context, userID string) ([]*UserInfor, error) {
+
+	token, ok := ctx.Value(constants.TokenKey).(string)
+
+	if !ok {
+		return nil, fmt.Errorf("token not found in context")
+	}
+
+	data, err := u.client.getListTeacherInfor(userID, token)
+	if err != nil {
+		return nil, err
+	}
+
+	if data == nil {
+		return nil, fmt.Errorf("no user data found for userID: %s", userID)
+	}
+
+	innerData, ok := data["data"].(map[string]interface{})
+	fmt.Printf("innerData: %v\n", innerData)
+	if !ok {
+		return nil, fmt.Errorf("invalid response format: missing 'data' field")
+	}
+
+	return nil, nil
+}
+
 func (u *userService) GetStaffInfor(ctx context.Context, studentID string) (*UserInfor, error) {
 	token, ok := ctx.Value(constants.TokenKey).(string)
 
@@ -312,6 +338,34 @@ func (c *callAPI) getTeacherInfor(studentID string, token string) (map[string]in
 func (c *callAPI) getStaffInfor(studentID string, token string) (map[string]interface{}, error) {
 
 	endpoint := fmt.Sprintf("/v1/gateway/staffs/%s", studentID)
+
+	header := map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer " + token,
+	}
+
+	res, err := c.client.CallAPI(c.clientServer, endpoint, http.MethodGet, nil, header)
+	if err != nil {
+		fmt.Printf("Error calling API: %v\n", err)
+		return nil, err
+	}
+
+	var userData interface{}
+
+	err = json.Unmarshal([]byte(res), &userData)
+	if err != nil {
+		fmt.Printf("Error unmarshalling response: %v\n", err)
+		return nil, err
+	}
+
+	myMap := userData.(map[string]interface{})
+
+	return myMap, nil
+}
+
+func (c *callAPI) getListTeacherInfor(userID string, token string) (map[string]interface{}, error) {
+
+	endpoint := fmt.Sprintf("/v1/gateway/teachers/get-by-user/%s", userID)
 
 	header := map[string]string{
 		"Content-Type":  "application/json",

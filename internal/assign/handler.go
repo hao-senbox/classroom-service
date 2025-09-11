@@ -4,7 +4,6 @@ import (
 	"classroom-service/helper"
 	"classroom-service/pkg/constants"
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -21,13 +20,7 @@ func NewAssignHandler(assignService AssignService) *AssignHandler {
 	}
 }
 
-func (h *AssignHandler) UpdateAssgin(c *gin.Context) {
-
-	id := c.Param("id")
-	if id == "" {
-		helper.SendError(c, http.StatusBadRequest, errors.New("id is required"), "INVALID_REQUEST")
-		return
-	}
+func (h *AssignHandler) AssignSlot(c *gin.Context) {
 
 	var req UpdateAssginRequest
 
@@ -50,7 +43,7 @@ func (h *AssignHandler) UpdateAssgin(c *gin.Context) {
 
 	ctx := context.WithValue(c, constants.TokenKey, token)
 
-	err := h.AssignService.UpdateAssgin(ctx, &req, userID.(string), id)
+	err := h.AssignService.AssignSlot(ctx, &req, userID.(string))
 	if err != nil {
 		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
 		return

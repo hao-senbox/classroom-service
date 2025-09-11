@@ -9,7 +9,7 @@ import (
 )
 
 type RegionRepository interface {
-	GetRegions(ctx context.Context) ([]*Region, error)
+	GetRegions(ctx context.Context, organizationID string) ([]*Region, error)
 	GetRegion(ctx context.Context, id primitive.ObjectID) (*Region, error)
 	CreateRegion(ctx context.Context, data *Region) error
 	UpdateRegion(ctx context.Context, id primitive.ObjectID, data *Region) error
@@ -26,11 +26,17 @@ func NewRegionRepository(collection *mongo.Collection) RegionRepository {
 	}
 }
 
-func (r *regionRepository) GetRegions(ctx context.Context) ([]*Region, error) {
+func (r *regionRepository) GetRegions(ctx context.Context, organizationID string) ([]*Region, error) {
 
 	var regions []*Region
 
-	cursor, err := r.regionCollection.Find(ctx, bson.M{})
+	filter := bson.M{}
+
+	if organizationID != "" {
+		filter = bson.M{"organization_id": organizationID}
+	}
+
+	cursor, err := r.regionCollection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +84,7 @@ func (r *regionRepository) UpdateRegion(ctx context.Context, id primitive.Object
 	}
 
 	return nil
-	
+
 }
 
 func (r *regionRepository) DeleteRegion(ctx context.Context, id primitive.ObjectID) error {

@@ -15,7 +15,6 @@ import (
 
 type ClassService interface {
 	CreateClass(ctx context.Context, request *CreateClassRequest, userID string) (string, error)
-	GetClasses(ctx context.Context, date string) ([]*ClassRoomResponse, error)
 	AddLeader(ctx context.Context, request *AddLeaderRequest) error
 	GetAssgins(ctx context.Context) ([]*TeacherStudentAssignment, error)
 	GetAssgin(ctx context.Context, id, index, date string) (*TeacherStudentAssignmentResponse, error)
@@ -106,128 +105,6 @@ func (r *classService) CreateClass(ctx context.Context, request *CreateClassRequ
 
 }
 
-func (r *classService) GetClasses(ctx context.Context, date string) ([]*ClassRoomResponse, error) {
-
-	var data []*ClassRoomResponse
-
-	var timeParse time.Time
-	if date != "" {
-		t, err := time.Parse("2006-01-02", date)
-		if err != nil {
-			return nil, err
-		}
-		timeParse = t
-	}
-
-	rooms, err := r.roomService.GetAllRooms(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, room := range rooms {
-		objID, err := primitive.ObjectIDFromHex(room.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		exists, err := r.repo.GetAssignmentsByClassID(ctx, objID, &timeParse)
-		if err != nil {
-			return nil, err
-		}
-
-		var assignsFromDB []*TeacherStudentAssignment
-		if !exists {
-			for i := 1; i <= 15; i++ {
-				assign := &TeacherStudentAssignment{
-					ID:             primitive.NewObjectID(),
-					Index:          i,
-					ClassRoomID:    objID,
-					TeacherID:      nil,
-					StudentID:      nil,
-					CreatedBy:      "system",
-					IsNotification: false,
-					CreatedAt:      timeParse,
-					UpdatedAt:      timeParse,
-				}
-				assignsFromDB = append(assignsFromDB, assign)
-			}
-			if err := r.repo.CreateManyAssignments(ctx, assignsFromDB); err != nil {
-				return nil, err
-			}
-		} else {
-			assignsFromDB, err = r.repo.GetAssignmentsByClass(ctx, objID, &timeParse)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		var assignsResp []*TeacherStudentAssignmentResponse
-		for _, assign := range assignsFromDB {
-			var teacherInfo *user.UserInfor
-			var studentInfo *user.UserInfor
-
-			if assign.TeacherID != nil && *assign.TeacherID != "" {
-				u, err := r.userService.GetUserInfor(ctx, *assign.TeacherID)
-				if err != nil || u == nil {
-					log.Printf("User not found: %s", *assign.TeacherID)
-				} else {
-					teacherInfo = u
-				}
-			}
-
-			if assign.StudentID != nil && *assign.StudentID != "" {
-				u, err := r.userService.GetUserInfor(ctx, *assign.StudentID)
-				if err != nil || u == nil {
-					log.Printf("User not found: %s", *assign.TeacherID)
-				} else {
-					studentInfo = u
-				}
-			}
-			assignsResp = append(assignsResp, &TeacherStudentAssignmentResponse{
-				ID:             assign.ID,
-				Index:          assign.Index,
-				ClassRoomID:    assign.ClassRoomID,
-				Teacher:        teacherInfo,
-				Student:        studentInfo,
-				CreatedBy:      assign.CreatedBy,
-				IsNotification: assign.IsNotification,
-				CreatedAt:      &assign.CreatedAt,
-				UpdatedAt:      &assign.UpdatedAt,
-			})
-		}
-
-		// Lấy leader
-		var leaderResponse *user.UserInfor
-		existingLeader, err := r.repo.GetLeaderByClassID(ctx, objID)
-		if err != nil {
-			return nil, err
-		}
-		if existingLeader == nil {
-			newLeader := &Leader{
-				ID:          primitive.NewObjectID(),
-				LeaderID:    "",
-				ClassRoomID: objID,
-				CreatedAt:   time.Now(),
-				UpdatedAt:   time.Now(),
-			}
-			if err := r.repo.CreateLeader(ctx, newLeader); err != nil {
-				return nil, err
-			}
-		} else if existingLeader.LeaderID != "" {
-			if u, err := r.userService.GetUserInfor(ctx, existingLeader.LeaderID); err == nil {
-				leaderResponse = u
-			}
-		}
-
-		data = append(data, &ClassRoomResponse{
-			Room:           *room,
-			Assigns:        assignsResp,
-			LeaderResponse: leaderResponse,
-		})
-	}
-
-	return data, nil
-}
 
 func (r *classService) AddLeader(ctx context.Context, request *AddLeaderRequest) error {
 
