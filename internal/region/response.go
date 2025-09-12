@@ -26,8 +26,8 @@ type ClassRoomResponse struct {
 	Description string              `json:"description"`
 	Icon        string              `json:"icon"`
 	Note        string              `json:"note"`
-	Room        *room.RoomInfor     `json:"location,omitempty"`
-	Leader      *user.UserInfor     `json:"leader,omitempty"`
+	Room        *room.RoomInfor     `json:"location"`
+	Leader      *user.UserInfor     `json:"leader"`
 	IsActive    bool                `json:"is_active"`
 	CreatedBy   string              `json:"created_by"`
 	CreatedAt   time.Time           `json:"created_at"`

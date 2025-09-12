@@ -10,6 +10,7 @@ import (
 
 type ClassroomRepository interface {
 	CreateClassroom(ctx context.Context, data *ClassRoom) error
+	UpdateClassroom(ctx context.Context, classroomID primitive.ObjectID, data *ClassRoom) error
 	GetClassroomByRegion(ctx context.Context, regionID primitive.ObjectID) ([]*ClassRoom, error)
 	GetClassroomByID(ctx context.Context, classroomID primitive.ObjectID) (*ClassRoom, error)
 }
@@ -33,6 +34,17 @@ func (c *classroomRepository) CreateClassroom(ctx context.Context, data *ClassRo
 
 	return nil
 
+}
+
+func (c *classroomRepository) UpdateClassroom(ctx context.Context, classroomID primitive.ObjectID, data *ClassRoom) error {
+
+	_, err := c.classroomCollection.UpdateOne(ctx, bson.M{"_id": classroomID}, bson.M{"$set": data})
+	if err != nil {
+		return err
+	}
+
+	return nil
+	
 }
 
 func (c *classroomRepository) GetClassroomByRegion(ctx context.Context, regionID primitive.ObjectID) ([]*ClassRoom, error) {

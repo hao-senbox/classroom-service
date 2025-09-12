@@ -4,6 +4,7 @@ import (
 	"classroom-service/helper"
 	"classroom-service/pkg/constants"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -51,6 +52,40 @@ func (h *ClassroomHandler) CreateClassroom(c *gin.Context) {
 	}
 
 	helper.SendSuccess(c, http.StatusOK, "Create Classroom Successfully", id)
+
+}
+
+func (h *ClassroomHandler) UpdateClassroom(c *gin.Context) {
+
+	var req UpdateClassroomRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		helper.SendError(c, http.StatusBadRequest, errors.New("id is required"), "INVALID_REQUEST")
+		return
+	}
+
+	token, exists := c.Get(constants.Token)
+	if !exists {
+		helper.SendError(c, 400, fmt.Errorf("token not found"), helper.ErrInvalidRequest)
+		return
+	}
+
+	ctx := context.WithValue(c, constants.TokenKey, token)
+
+	err := h.ClassroomService.UpdateClassroom(ctx, &req, id)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Update Classroom Successfully", nil)
 
 }
 
