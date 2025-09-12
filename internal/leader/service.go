@@ -10,6 +10,7 @@ import (
 
 type LeaderService interface {
 	AddLeader(c *gin.Context, req *CreateLeaderRequest) error
+	DeleteLeader(c *gin.Context, req *DeleteLeaderRequest) error
 }
 
 type leaderService struct {
@@ -46,4 +47,18 @@ func (s *leaderService) AddLeader(c *gin.Context, req *CreateLeaderRequest) erro
 	}
 
 	return s.LeaderRepository.CreateLeader(c, data)
+}
+
+func (s *leaderService) DeleteLeader(c *gin.Context, req *DeleteLeaderRequest) error {
+	
+	if req.ClassroomID == "" {
+		return fmt.Errorf("classroom_id is required")
+	}
+
+	objClassroomID, err := primitive.ObjectIDFromHex(req.ClassroomID)
+	if err != nil {
+		return err
+	}
+
+	return s.LeaderRepository.DeleteLeader(c, objClassroomID)
 }

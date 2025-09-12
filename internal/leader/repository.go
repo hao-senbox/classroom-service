@@ -11,6 +11,7 @@ import (
 type LeaderRepository interface {
 	CreateLeader(ctx context.Context, leader *Leader) error
 	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) (*Leader, error)
+	DeleteLeader(ctx context.Context, classroomID primitive.ObjectID) error
 }
 
 type leaderRepository struct {
@@ -59,4 +60,15 @@ func (r *leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID p
 
 	return &leader, nil
 	
+}
+
+func (r *leaderRepository) DeleteLeader(ctx context.Context, classroomID primitive.ObjectID) error {
+
+	filter := bson.M{
+		"class_room_id": classroomID,
+	}
+
+	_, err := r.leaderCollection.DeleteOne(ctx, filter)
+	return err
+
 }

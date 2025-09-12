@@ -36,3 +36,23 @@ func (r *LeaderHandler) AddLeader(c *gin.Context) {
 	helper.SendSuccess(c, http.StatusOK, "Add Leader Successfully", nil)
 
 }
+
+func (r *LeaderHandler) DeleteLeader(c *gin.Context) {
+
+	var req DeleteLeaderRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return 
+	}
+
+	err := r.LeaderService.DeleteLeader(c, &req)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Delete Leader Successfully", nil)
+	
+}
