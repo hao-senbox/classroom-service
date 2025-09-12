@@ -7,7 +7,7 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, handler *LeaderHandler) {
-	leaderGroup := r.Group("/api/v1/admin/leaders", middleware.Secured())
+	leaderGroup := r.Group("/api/v1/admin/classrooms/leaders", middleware.Secured())
 	{
 		leaderGroup.POST("", handler.AddLeader)
 	}
