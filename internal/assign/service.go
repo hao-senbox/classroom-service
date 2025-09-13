@@ -3,7 +3,6 @@ package assign
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -103,7 +102,7 @@ func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginReq
 }
 
 func (s *assignService) UnAssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error {
-	
+
 	if request.SlotNumber < -1 || request.SlotNumber > 15 {
 		return errors.New("slot number must be between 1 and 15")
 	}
