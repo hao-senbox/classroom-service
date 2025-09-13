@@ -2,6 +2,7 @@ package leader
 
 import (
 	"context"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -10,8 +11,8 @@ import (
 
 type LeaderRepository interface {
 	CreateLeader(ctx context.Context, leader *Leader) error
-	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) (*Leader, error)
-	DeleteLeader(ctx context.Context, classroomID primitive.ObjectID) error
+	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) (*Leader, error)
+	DeleteLeader(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) error
 }
 
 type leaderRepository struct {
@@ -43,10 +44,17 @@ func (r *leaderRepository) CreateLeader(ctx context.Context, leader *Leader) err
 	return nil
 }
 
-func (r *leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) (*Leader, error) {
+func (r *leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) (*Leader, error) {
+
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	end := start.Add(24 * time.Hour)
 
 	filter := bson.M{
 		"class_room_id": classroomID,
+		"date": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
 	}
 
 	var leader Leader
@@ -59,16 +67,24 @@ func (r *leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID p
 	}
 
 	return &leader, nil
-	
+
 }
 
-func (r *leaderRepository) DeleteLeader(ctx context.Context, classroomID primitive.ObjectID) error {
+func (r *leaderRepository) DeleteLeader(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) error {
+
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	end := start.Add(24 * time.Hour)
 
 	filter := bson.M{
 		"class_room_id": classroomID,
+		"date": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
 	}
 
 	_, err := r.leaderCollection.DeleteOne(ctx, filter)
 	return err
 
 }
+ 

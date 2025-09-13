@@ -25,8 +25,8 @@ func NewLeaderService(leaderRepository LeaderRepository) LeaderService {
 
 func (s *leaderService) AddLeader(c *gin.Context, req *CreateLeaderRequest) error {
 
-	if req.UserID == "" {
-		return fmt.Errorf("user_id is required")
+	if req.Owner == (Owner{}) {
+		return fmt.Errorf("owner is required")
 	}
 
 	if req.ClassroomID == "" {
@@ -38,10 +38,20 @@ func (s *leaderService) AddLeader(c *gin.Context, req *CreateLeaderRequest) erro
 		return err
 	}
 
+	if req.Date == "" {
+		return fmt.Errorf("date is required")
+	}
+
+	dateParse, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return err
+	}
+
 	data := &Leader{
 		ID:          primitive.NewObjectID(),
-		UserID:      req.UserID,
+		Owner:       req.Owner,
 		ClassRoomID: objClassroomID,
+		Date:        dateParse,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -50,9 +60,18 @@ func (s *leaderService) AddLeader(c *gin.Context, req *CreateLeaderRequest) erro
 }
 
 func (s *leaderService) DeleteLeader(c *gin.Context, req *DeleteLeaderRequest) error {
-	
+
 	if req.ClassroomID == "" {
 		return fmt.Errorf("classroom_id is required")
+	}
+
+	if req.Date == "" {
+		return fmt.Errorf("date is required")
+	}
+
+	dateParse, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		return err
 	}
 
 	objClassroomID, err := primitive.ObjectIDFromHex(req.ClassroomID)
@@ -60,5 +79,5 @@ func (s *leaderService) DeleteLeader(c *gin.Context, req *DeleteLeaderRequest) e
 		return err
 	}
 
-	return s.LeaderRepository.DeleteLeader(c, objClassroomID)
+	return s.LeaderRepository.DeleteLeader(c, objClassroomID, &dateParse)
 }

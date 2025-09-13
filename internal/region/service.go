@@ -119,23 +119,34 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 				}
 			}
 
-			leader, err := r.LeaderRepository.GetLeaderByClassID(ctx, classroom.ID)
+			leader, err := r.LeaderRepository.GetLeaderByClassID(ctx, classroom.ID, &dateParse)
 			if err != nil {
 				return nil, err
 			}
+
 			var leaderInfor *user.UserInfor
 			if leader != nil {
-				leaderInforData, err := r.UserService.GetUserInfor(ctx, leader.UserID)
-				if err != nil {
-					return nil, err
+				if leader.Owner.OwnerRole == "teacher" {
+					leaderInforData, err := r.UserService.GetTeacherInfor(ctx, leader.Owner.OwnerID)
+					if err != nil {
+						return nil, err
+					}
+					leaderInfor = &user.UserInfor{
+						UserID:   leaderInforData.UserID,
+						UserName: leaderInforData.UserName,
+						Avartar:  leaderInforData.Avartar,
+					}
+				} else if leader.Owner.OwnerRole == "staff" {
+					leaderInforData, err := r.UserService.GetStaffInfor(ctx, leader.Owner.OwnerID)
+					if err != nil {
+						return nil, err
+					}
+					leaderInfor = &user.UserInfor{
+						UserID:   leaderInforData.UserID,
+						UserName: leaderInforData.UserName,
+						Avartar:  leaderInforData.Avartar,
+					}
 				}
-				leaderInfor = &user.UserInfor{
-					UserID:   leaderInforData.UserID,
-					UserName: leaderInforData.UserName,
-					Avartar:  leaderInforData.Avartar,
-				}
-			} else {
-				leaderInfor = nil
 			}
 
 			allAssignments, err := r.AssignRepository.GetAssignmentsByClassroomAndDate(ctx, classroom.ID, &dateParse)
@@ -268,27 +279,36 @@ func (r *regionService) GetRegion(ctx context.Context, id string, date string) (
 			}
 		}
 
-		leader, err := r.LeaderRepository.GetLeaderByClassID(ctx, classroom.ID)
+		leader, err := r.LeaderRepository.GetLeaderByClassID(ctx, classroom.ID, &dateParse)
 		if err != nil {
 			return nil, err
 		}
+
 		var leaderInfor *user.UserInfor
+
 		if leader != nil {
-			leaderInforData, err := r.UserService.GetUserInfor(ctx, leader.UserID)
-			if err != nil {
-				return nil, err
-			}
-			leaderInfor = &user.UserInfor{
-				UserID:   leaderInforData.UserID,
-				UserName: leaderInforData.UserName,
-			}
-		} else {
-			leaderInfor = &user.UserInfor{
-				UserID:   "",
-				UserName: "",
+			if leader.Owner.OwnerRole == "teacher" {
+				leaderInforData, err := r.UserService.GetTeacherInfor(ctx, leader.Owner.OwnerID)
+				if err != nil {
+					return nil, err
+				}
+				leaderInfor = &user.UserInfor{
+					UserID:   leaderInforData.UserID,
+					UserName: leaderInforData.UserName,
+					Avartar:  leaderInforData.Avartar,
+				}
+			} else if leader.Owner.OwnerRole == "staff" {
+				leaderInforData, err := r.UserService.GetStaffInfor(ctx, leader.Owner.OwnerID)
+				if err != nil {
+					return nil, err
+				}
+				leaderInfor = &user.UserInfor{
+					UserID:   leaderInforData.UserID,
+					UserName: leaderInforData.UserName,
+					Avartar:  leaderInforData.Avartar,
+				}
 			}
 		}
-
 
 		allAssignments, err := r.AssignRepository.GetAssignmentsByClassroomAndDate(ctx, classroom.ID, &dateParse)
 		if err != nil {
@@ -368,7 +388,6 @@ func (r *regionService) GetRegion(ctx context.Context, id string, date string) (
 
 	return res, nil
 }
-
 
 func getStringValue(s *string) string {
 	if s == nil {
