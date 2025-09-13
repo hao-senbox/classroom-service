@@ -112,5 +112,5 @@ func (h *ClassroomHandler) GetClassroomsByUserID(c *gin.Context) {
 		return
 	}
 
-	helper.SendSuccess(c, http.StatusOK, "Success", classrooms)
+	helper.SendSuccess(c, http.StatusOK, "Get Classrooms Successfully", classrooms)
 }

@@ -12,8 +12,8 @@ type SlotAssignmentResponse struct {
 	SlotNumber     int             `json:"slot_number"`
 	AssignmentID   *string         `json:"assignment_id,omitempty"`
 	AssignmentDate *time.Time      `json:"assignment_date,omitempty"`
-	Teacher        *user.UserInfor `json:"teacher,omitempty"`
-	Student        *user.UserInfor `json:"student,omitempty"`
+	Teacher        *user.UserInfor `json:"teacher"`
+	Student        *user.UserInfor `json:"student"`
 	IsAssigned     bool            `json:"is_assigned"`
 	CreatedAt      *time.Time      `json:"created_at,omitempty"`
 	UpdatedAt      *time.Time      `json:"updated_at,omitempty"`

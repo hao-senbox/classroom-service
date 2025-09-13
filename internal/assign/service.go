@@ -24,7 +24,7 @@ func NewAssignService(repo AssignRepository) AssignService {
 
 func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error {
 
-	if request.SlotNumber < 1 || request.SlotNumber > 15 {
+	if request.SlotNumber < 0 || request.SlotNumber > 15 {
 		return errors.New("slot number must be between 1 and 15")
 	}
 

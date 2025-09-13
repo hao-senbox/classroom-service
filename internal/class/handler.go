@@ -54,8 +54,6 @@ func (h *ClassHandler) CreateClass(c *gin.Context) {
 	helper.SendSuccess(c, http.StatusOK, "Success", id)
 }
 
-
-
 func (h *ClassHandler) AddLeader(c *gin.Context) {
 
 	var req AddLeaderRequest

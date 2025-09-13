@@ -49,5 +49,5 @@ func (h *AssignHandler) AssignSlot(c *gin.Context) {
 		return
 	}
 
-	helper.SendSuccess(c, http.StatusOK, "Success", nil)
+	helper.SendSuccess(c, http.StatusOK, "Create assign successfully", nil)
 }
