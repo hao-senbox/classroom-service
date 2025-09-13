@@ -7,7 +7,7 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, handler *AssignHandler) {
-	assginGroup := r.Group("/api/v1/admin/classrooms/assgins", middleware.Secured())
+	assginGroup := r.Group("/api/v1/admin/classrooms/assigns", middleware.Secured())
 	{
 		// assginGroup.GET("", handler.GetAssgins)
 		assginGroup.POST("", handler.AssignSlot)
