@@ -179,5 +179,5 @@ func (h *RegionHandler) DeleteRegion(c *gin.Context) {
 	}
 
 	helper.SendSuccess(c, http.StatusOK, "Delete Region Successfully", nil)
-	
+
 }

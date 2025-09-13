@@ -7,3 +7,4 @@ type UpdateAssginRequest struct {
 	SlotNumber  int     `json:"slot_number"`
 	Date        string  `json:"date"`
 }
+

@@ -3,6 +3,7 @@ package assign
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -10,6 +11,7 @@ import (
 
 type AssignService interface {
 	AssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error
+	UnAssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error
 }
 
 type assignService struct {
@@ -24,7 +26,7 @@ func NewAssignService(repo AssignRepository) AssignService {
 
 func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error {
 
-	if request.SlotNumber < 0 || request.SlotNumber > 15 {
+	if request.SlotNumber < -1 || request.SlotNumber > 15 {
 		return errors.New("slot number must be between 1 and 15")
 	}
 
@@ -98,4 +100,42 @@ func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginReq
 
 		return s.AssignRepository.UpdateAssgin(ctx, assign.ID, assign)
 	}
+}
+
+func (s *assignService) UnAssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error {
+	
+	if request.SlotNumber < -1 || request.SlotNumber > 15 {
+		return errors.New("slot number must be between 1 and 15")
+	}
+
+	classroomObjID, err := primitive.ObjectIDFromHex(request.ClassroomID)
+	if err != nil {
+		return err
+	}
+
+	if request.Date == "" {
+		return errors.New("date is required")
+	}
+
+	dateParse, err := time.Parse("2006-01-02", request.Date)
+	if err != nil {
+		return err
+	}
+
+	assign, err := s.AssignRepository.GetAssignmentBySlotAndDate(ctx, classroomObjID, request.SlotNumber, &dateParse)
+	if err != nil {
+		return err
+	}
+	if assign == nil {
+		return errors.New("assign not found")
+	}
+
+	if request.TeacherID != nil {
+		assign.TeacherID = nil
+	}
+	if request.StudentID != nil {
+		assign.StudentID = nil
+	}
+
+	return s.AssignRepository.UpdateAssgin(ctx, assign.ID, assign)
 }
