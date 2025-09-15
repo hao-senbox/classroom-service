@@ -17,6 +17,7 @@ type UserService interface {
 	GetStudentInfor(ctx context.Context, studentID string) (*UserInfor, error)
 	GetTeacherInfor(ctx context.Context, studentID string) (*UserInfor, error)
 	GetStaffInfor(ctx context.Context, studentID string) (*UserInfor, error)
+	GetCurrentUser(ctx context.Context) (*CurrentUser, error)
 }
 
 type userService struct {
@@ -61,6 +62,27 @@ func NewServiceAPI(client *api.Client, serviceName string) *callAPI {
 		client:       sd,
 		clientServer: service,
 	}
+}
+
+func (u *userService) GetCurrentUser(ctx context.Context) (*CurrentUser, error) {
+
+	token, ok := ctx.Value(constants.Token).(string)
+
+	if !ok {
+		return nil, fmt.Errorf("token not found in context")
+	}
+
+	data, err := u.client.getCurrentUser(token)
+	if err != nil {
+		return nil, err
+	}
+
+	if data == nil {
+		return nil, fmt.Errorf("no user data found for userID: %s", token)
+	}
+
+
+	return data, nil
 }
 
 func (u *userService) GetUserInfor(ctx context.Context, userID string) (*UserInfor, error) {
@@ -389,6 +411,31 @@ func (c *callAPI) getListTeacherInfor(userID string, token string) (map[string]i
 	myMap := userData.(map[string]interface{})
 
 	return myMap, nil
+}
+
+func (c *callAPI) getCurrentUser(token string) (*CurrentUser, error) {
+
+	endpoint := "/v1/user/current-user/"
+
+	header := map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer " + token,
+	}
+
+	res, err := c.client.CallAPI(c.clientServer, endpoint, http.MethodGet, nil, header)
+	if err != nil {
+		fmt.Printf("Error calling API: %v\n", err)
+		return nil, err
+	}
+
+	var data APIGateWayResponse[CurrentUser]
+	err = json.Unmarshal([]byte(res), &data)
+	if err != nil {
+		fmt.Printf("Error unmarshalling response: %v\n", err)
+		return nil, err
+	}
+
+	return &data.Data, nil
 }
 
 func castToInt64(v interface{}) int64 {

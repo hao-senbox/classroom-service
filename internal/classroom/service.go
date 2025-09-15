@@ -148,7 +148,6 @@ func (s *classroomService) UpdateClassroom(ctx context.Context, req *UpdateClass
 	return nil
 }
 
-
 func (s *classroomService) GetClassroomsByUserID(ctx context.Context, userID string) ([]string, error) {
 	return []string{}, nil
 }
