@@ -2,6 +2,7 @@ package assign
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -102,11 +103,13 @@ func (r *assignRepository) GetAssignmentsByClassroomAndDate(ctx context.Context,
 
 	filter := bson.M{
 		"class_room_id": classroomID,
-		"created_at": bson.M{
+		"assign_date": bson.M{
 			"$gte": start,
 			"$lt":  end,
 		},
 	}
+
+	fmt.Printf("filter: %v\n", filter)
 
 	cursor, err := r.assginCollection.Find(ctx, filter)
 	if err != nil {

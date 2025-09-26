@@ -8,6 +8,7 @@ import (
 	"classroom-service/internal/user"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -153,6 +154,8 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 			if err != nil {
 				return nil, err
 			}
+
+			fmt.Println("allAssignments: ", allAssignments)
 
 			assignmentResponses := make([]*SlotAssignmentResponse, 0)
 			for _, assignment := range allAssignments {
