@@ -29,6 +29,7 @@ func (r *leaderRepository) CreateLeader(ctx context.Context, leader *Leader) err
 
 	filter := bson.M{
 		"class_room_id": leader.ClassRoomID,
+		"date":          leader.Date,
 	}
 
 	_, err := r.leaderCollection.DeleteMany(ctx, filter)
