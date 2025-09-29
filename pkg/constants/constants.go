@@ -106,6 +106,12 @@ const (
 	MaximumUsageTime = "maximum_usage_time"
 
 	UserID = "user_id"
+
+	ClassroomMessageKey = "message"
+	ClassroomNoteKey    = "note"
+	ClassroomNameKey    = "name"
+	ClassroomDescKey    = "description"
+
 )
 
 type contextKey string

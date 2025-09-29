@@ -1,6 +1,7 @@
 package region
 
 import (
+	"classroom-service/internal/language"
 	"classroom-service/internal/room"
 	"classroom-service/internal/user"
 	"time"
@@ -33,11 +34,11 @@ type ClassRoomResponse struct {
 	CreatedAt   time.Time           `json:"created_at"`
 	UpdatedAt   time.Time           `json:"updated_at"`
 
-	TotalSlots     int `json:"total_slots"`
-	AssignedSlots  int `json:"assigned_slots"`
-	AvailableSlots int `json:"available_slots"`
-
-	RecentAssignments []*SlotAssignmentResponse `json:"recent_assignments"`
+	TotalSlots        int                                `json:"total_slots"`
+	AssignedSlots     int                                `json:"assigned_slots"`
+	AvailableSlots    int                                `json:"available_slots"`
+	MessageLanguages  []language.MessageLanguageResponse `json:"message_languages"`
+	RecentAssignments []*SlotAssignmentResponse          `json:"recent_assignments"`
 }
 
 type RegionResponse struct {

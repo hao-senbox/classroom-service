@@ -3,12 +3,12 @@ package region
 import (
 	"classroom-service/internal/assign"
 	"classroom-service/internal/classroom"
+	"classroom-service/internal/language"
 	"classroom-service/internal/leader"
 	"classroom-service/internal/room"
 	"classroom-service/internal/user"
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -29,6 +29,7 @@ type regionService struct {
 	UserService         user.UserService
 	RoomService         room.RoomService
 	LeaderRepository    leader.LeaderRepository
+	LanguageService     language.MessageLanguageGateway
 }
 
 func NewRegionService(regionRepository RegionRepository,
@@ -36,7 +37,8 @@ func NewRegionService(regionRepository RegionRepository,
 	assignRepository assign.AssignRepository,
 	userService user.UserService,
 	roomService room.RoomService,
-	leaderRepository leader.LeaderRepository) RegionService {
+	leaderRepository leader.LeaderRepository,
+	languageService language.MessageLanguageGateway) RegionService {
 	return &regionService{
 		RegionRepository:    regionRepository,
 		ClassroomRepository: classroomRepository,
@@ -44,6 +46,7 @@ func NewRegionService(regionRepository RegionRepository,
 		UserService:         userService,
 		RoomService:         roomService,
 		LeaderRepository:    leaderRepository,
+		LanguageService:     languageService,
 	}
 }
 
@@ -155,7 +158,11 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 				return nil, err
 			}
 
-			fmt.Println("allAssignments: ", allAssignments)
+			var messageLanguage []language.MessageLanguageResponse
+			messageLanguage, err = r.LanguageService.GetMessageLanguages(ctx, classroom.ID.Hex())
+			if err != nil {
+				messageLanguage = nil
+			}
 
 			assignmentResponses := make([]*SlotAssignmentResponse, 0)
 			for _, assignment := range allAssignments {
@@ -210,6 +217,7 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 				CreatedBy:         classroom.CreatedBy,
 				CreatedAt:         classroom.CreatedAt,
 				UpdatedAt:         classroom.UpdatedAt,
+				MessageLanguages:  messageLanguage,
 				TotalSlots:        15,
 				AssignedSlots:     len(assignmentResponses),
 				AvailableSlots:    15 - len(assignmentResponses),

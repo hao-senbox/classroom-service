@@ -75,6 +75,7 @@ func (sd *serviceDiscovery) DiscoverService() (*api.CatalogService, error) {
 func (sd *serviceDiscovery) CallAPI(service *api.CatalogService, endpoint, method string, body []byte, headers map[string]string) (string, error) {
 	// Build the API URL using service address and port
 	url := fmt.Sprintf("http://%s:%d%s", service.ServiceAddress, service.ServicePort, endpoint)
+	fmt.Printf("API URL: %s\n", url)
 	// Create a new HTTP request
 	req, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {

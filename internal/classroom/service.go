@@ -2,6 +2,7 @@ package classroom
 
 import (
 	"classroom-service/internal/assign"
+	"classroom-service/internal/language"
 	"classroom-service/internal/user"
 	"context"
 	"errors"
@@ -21,15 +22,18 @@ type classroomService struct {
 	ClassroomRepository ClassroomRepository
 	AssignRepository    assign.AssignRepository
 	UserService         user.UserService
+	LanguageService     language.MessageLanguageGateway
 }
 
 func NewClassroomService(classroomRepository ClassroomRepository,
 	assignRepository assign.AssignRepository,
-	userService user.UserService) ClassroomService {
+	userService user.UserService,
+	languageService language.MessageLanguageGateway) ClassroomService {
 	return &classroomService{
 		ClassroomRepository: classroomRepository,
 		AssignRepository:    assignRepository,
 		UserService:         userService,
+		LanguageService:     languageService,
 	}
 }
 
@@ -88,6 +92,13 @@ func (s *classroomService) CreateClassroom(ctx context.Context, req *CreateClass
 		return "", err
 	}
 
+	languageReq := BuildDepartmentMessagesUpdate(ClassroomID.Hex(), *req)
+
+	err = s.LanguageService.UploadMessages(ctx, languageReq)
+	if err != nil {
+		return "", err
+	}
+
 	return ClassroomID.Hex(), nil
 
 }
@@ -112,16 +123,18 @@ func (s *classroomService) UpdateClassroom(ctx context.Context, req *UpdateClass
 		classroom.Name = req.Name
 	}
 
-	if req.Description != nil {
-		classroom.Description = req.Description
-	}
-
 	if req.Icon != nil {
 		classroom.Icon = req.Icon
 	}
 
+	note := ""
 	if req.Note != nil {
-		classroom.Note = req.Note
+		note = *req.Note
+	}
+
+	desc := ""
+	if req.Description != nil {
+		desc = *req.Description
 	}
 
 	if req.RegionID != nil {
@@ -141,6 +154,23 @@ func (s *classroomService) UpdateClassroom(ctx context.Context, req *UpdateClass
 	}
 
 	err = s.ClassroomRepository.UpdateClassroom(ctx, objectID, classroom)
+	if err != nil {
+		return err
+	}
+
+	reqLanguage := &CreateClassroomRequest{
+		Name:        req.Name,
+		LanguageID:  req.LanguageID,
+		RegionID:    req.RegionID,
+		LocationID:  req.LocationID,
+		Description: &desc,
+		Note:        &note,
+		Icon:        req.Icon,
+	}
+
+	languageReq := BuildDepartmentMessagesUpdate(classroom.ID.Hex(), *reqLanguage)
+
+	err = s.LanguageService.UploadMessages(ctx, languageReq)
 	if err != nil {
 		return err
 	}
