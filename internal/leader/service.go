@@ -11,6 +11,9 @@ import (
 type LeaderService interface {
 	AddLeader(c *gin.Context, req *CreateLeaderRequest) error
 	DeleteLeader(c *gin.Context, req *DeleteLeaderRequest) error
+	// Leader Template
+	CreateLeaderTemplate(c *gin.Context, req *CreateLeaderRequest) error
+	DeleteLeaderTemplate(c *gin.Context, req *DeleteLeaderRequest) error
 }
 
 type leaderService struct {
@@ -80,4 +83,46 @@ func (s *leaderService) DeleteLeader(c *gin.Context, req *DeleteLeaderRequest) e
 	}
 
 	return s.LeaderRepository.DeleteLeader(c, objClassroomID, &dateParse)
+}
+
+func (s *leaderService) CreateLeaderTemplate(c *gin.Context, req *CreateLeaderRequest) error {
+
+	if req.Owner == (Owner{}) {
+		return fmt.Errorf("owner is required")
+	}
+
+	if req.ClassroomID == "" {
+		return fmt.Errorf("classroom_id is required")
+	}
+
+	objClassroomID, err := primitive.ObjectIDFromHex(req.ClassroomID)
+	if err != nil {
+		return err
+	}
+
+	data := &LeaderTemplate{
+		ID:          primitive.NewObjectID(),
+		Owner:       &req.Owner,
+		ClassRoomID: objClassroomID,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	return s.LeaderRepository.CreateLeaderTemplate(c, data)
+
+}
+
+func (s *leaderService) DeleteLeaderTemplate(c *gin.Context, req *DeleteLeaderRequest) error {
+
+	if req.ClassroomID == "" {
+		return fmt.Errorf("classroom_id is required")
+	}
+
+	objClassroomID, err := primitive.ObjectIDFromHex(req.ClassroomID)
+	if err != nil {
+		return err
+	}
+
+	return s.LeaderRepository.DeleteLeaderTemplate(c, objClassroomID)
+
 }

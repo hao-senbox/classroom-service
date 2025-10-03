@@ -19,3 +19,9 @@ type UpdateClassroomRequest struct {
 	Note        *string `json:"note"`
 	Icon        *string `json:"icon"`
 }
+
+type CreateAssignmentByTemplateRequest struct {
+	ClassroomID string `json:"classroom_id"`
+	StartDate   string `json:"start_date"`
+	EndDate     string `json:"end_date"`
+}

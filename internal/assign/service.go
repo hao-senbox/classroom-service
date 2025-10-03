@@ -11,6 +11,7 @@ import (
 type AssignService interface {
 	AssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error
 	UnAssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error
+	CreateAssignmentTemplate(ctx context.Context, request *UpdateAssginRequest, userID string) error
 }
 
 type assignService struct {
@@ -60,8 +61,8 @@ func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginReq
 
 		return s.AssignRepository.CreateAssignment(ctx, newAssignment)
 	} else {
-		if existingAssignment.TeacherID != nil {
-			if request.StudentID != nil {
+		if request.TeacherID != nil {
+			if existingAssignment.StudentID != nil {
 				exists, err := s.AssignRepository.CheckDuplicateAssignmentForDate(ctx, classroomObjID, dateParse, *request.StudentID, *existingAssignment.TeacherID)
 				if err != nil {
 					return err
@@ -71,8 +72,9 @@ func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginReq
 				}
 			}
 			existingAssignment.StudentID = request.StudentID
-		} else {
-			if request.TeacherID != nil {
+		}
+		if request.StudentID != nil {
+			if existingAssignment.TeacherID != nil {
 				exists, err := s.AssignRepository.CheckDuplicateAssignmentForDate(ctx, classroomObjID, dateParse, *existingAssignment.StudentID, *request.TeacherID)
 				if err != nil {
 					return err
@@ -137,4 +139,75 @@ func (s *assignService) UnAssignSlot(ctx context.Context, request *UpdateAssginR
 	}
 
 	return s.AssignRepository.UpdateAssgin(ctx, assign.ID, assign)
+}
+
+func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *UpdateAssginRequest, userID string) error {
+
+	if request.SlotNumber < -1 || request.SlotNumber > 15 {
+		return errors.New("slot number must be between 1 and 15")
+	}
+
+	classroomObjID, err := primitive.ObjectIDFromHex(request.ClassroomID)
+	if err != nil {
+		return err
+	}
+
+	existingAssignment, err := s.AssignRepository.GetAssignmentTemplateBySlot(ctx, classroomObjID, request.SlotNumber)
+	if err != nil {
+		return err
+	}
+
+	if existingAssignment == nil {
+		newAssignment := &ClassRoomTemplateAssignment{
+			ID:          primitive.NewObjectID(),
+			ClassRoomID: classroomObjID,
+			SlotNumber:  request.SlotNumber,
+			TeacherID:   request.TeacherID,
+			StudentID:   request.StudentID,
+			CreatedBy:   userID,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+
+		return s.AssignRepository.CreateAssignmentTemplate(ctx, newAssignment)
+	} else {
+		if request.TeacherID != nil {
+			if existingAssignment.StudentID != nil {
+				exists, err := s.AssignRepository.CheckDuplicateAssignmentTemplate(
+					ctx,
+					classroomObjID,
+					*existingAssignment.StudentID,
+					*request.TeacherID,
+				)
+				if err != nil {
+					return err
+				}
+				if exists {
+					return errors.New("teacher already assigned to this student")
+				}
+			}
+			existingAssignment.TeacherID = request.TeacherID
+		}
+
+		if request.StudentID != nil {
+			if existingAssignment.TeacherID != nil {
+				exists, err := s.AssignRepository.CheckDuplicateAssignmentTemplate(
+					ctx,
+					classroomObjID,
+					*request.StudentID,
+					*existingAssignment.TeacherID,
+				)
+				if err != nil {
+					return err
+				}
+				if exists {
+					return errors.New("student already assigned to this teacher")
+				}
+			}
+			existingAssignment.StudentID = request.StudentID
+		}
+
+		return s.AssignRepository.UpdateAssginTemplate(ctx, existingAssignment.ID, existingAssignment)
+	}
+
 }

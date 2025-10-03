@@ -114,3 +114,58 @@ func (h *ClassroomHandler) GetClassroomsByUserID(c *gin.Context) {
 
 	helper.SendSuccess(c, http.StatusOK, "Get Classrooms Successfully", classrooms)
 }
+
+func (h *ClassroomHandler) GetClassroomByIDTemplate(c *gin.Context) {
+
+	id := c.Param("classroom_id")
+	if id == "" {
+		helper.SendError(c, http.StatusBadRequest, errors.New("id is required"), "INVALID_REQUEST")
+		return
+	}
+
+	token, exists := c.Get(constants.Token)
+	if !exists {
+		helper.SendError(c, 400, fmt.Errorf("token not found"), helper.ErrInvalidRequest)
+		return
+	}
+
+	ctx := context.WithValue(c, constants.TokenKey, token)
+
+	classroom, err := h.ClassroomService.GetClassroomByIDTemplate(ctx, id)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Get Classroom Template Successfully", classroom)
+
+}
+
+func (h *ClassroomHandler) CreateAssignmentByTemplate(c *gin.Context) {
+
+	var req CreateAssignmentByTemplateRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	token, exists := c.Get(constants.Token)
+	if !exists {
+		helper.SendError(c, 400, fmt.Errorf("token not found"), helper.ErrInvalidRequest)
+		return
+	}
+
+	ctx := context.WithValue(c, constants.TokenKey, token)
+
+	err := h.ClassroomService.CreateAssignmentByTemplate(ctx, &req)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Create Assignment Successfully", nil)
+
+}

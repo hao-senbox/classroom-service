@@ -56,3 +56,43 @@ func (r *LeaderHandler) DeleteLeader(c *gin.Context) {
 	helper.SendSuccess(c, http.StatusOK, "Delete Leader Successfully", nil)
 	
 }
+
+func (r *LeaderHandler) CreateLeaderTemplate(c *gin.Context) {
+
+	var req CreateLeaderRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return 
+	}
+
+	err := r.LeaderService.CreateLeaderTemplate(c, &req)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Create Leader Template Successfully", nil)
+
+}
+
+func (r *LeaderHandler) DeleteLeaderTemplate(c *gin.Context) {
+
+	var req DeleteLeaderRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return 
+	}
+
+	err := r.LeaderService.DeleteLeaderTemplate(c, &req)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Delete Leader Template Successfully", nil)
+	
+}

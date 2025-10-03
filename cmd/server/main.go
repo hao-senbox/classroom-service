@@ -85,17 +85,19 @@ func main() {
 	classroomCollection := mongoClient.Database(cfg.MongoDB).Collection("classroom")
 	assignCollection := mongoClient.Database(cfg.MongoDB).Collection("assign")
 	leaderCollection := mongoClient.Database(cfg.MongoDB).Collection("leader")
+	assignTemplateCollection := mongoClient.Database(cfg.MongoDB).Collection("assign_template")
+	leaderTemplateCollection := mongoClient.Database(cfg.MongoDB).Collection("leader_template")
 
-	leaderRepository := leader.NewLeaderRepository(leaderCollection)
+	leaderRepository := leader.NewLeaderRepository(leaderCollection, leaderTemplateCollection)
 	leaderService := leader.NewLeaderService(leaderRepository)
 	leaderHandler := leader.NewLeaderHandler(leaderService)
 
-	assignRepository := assign.NewAssignRepository(assignCollection)
+	assignRepository := assign.NewAssignRepository(assignCollection, assignTemplateCollection)
 	assignService := assign.NewAssignService(assignRepository)
 	assignHandler := assign.NewAssignHandler(assignService)
 
 	classroomRepository := classroom.NewClassroomRepository(classroomCollection)
-	classroomService := classroom.NewClassroomService(classroomRepository, assignRepository, userService, languageService)
+	classroomService := classroom.NewClassroomService(classroomRepository, assignRepository, userService, leaderRepository, languageService)
 	classroomHandler := classroom.NewClassroomHandler(classroomService)
 
 	regionRepository := region.NewRegionRepository(regionCollection)

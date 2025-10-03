@@ -18,3 +18,13 @@ type TeacherStudentAssignment struct {
 	CreatedAt      time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt      time.Time          `json:"updated_at" bson:"updated_at"`
 }
+type ClassRoomTemplateAssignment struct {
+	ID          primitive.ObjectID `json:"id" bson:"_id"`
+	ClassRoomID primitive.ObjectID `json:"class_room_id" bson:"class_room_id"`
+	SlotNumber  int                `json:"slot_number" bson:"slot_number"`
+	TeacherID   *string            `json:"teacher_id" bson:"teacher_id"`
+	StudentID   *string            `json:"student_id" bson:"student_id"`
+	CreatedBy   string             `json:"created_by" bson:"created_by"`
+	CreatedAt   time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt   time.Time          `json:"updated_at" bson:"updated_at"`
+}
