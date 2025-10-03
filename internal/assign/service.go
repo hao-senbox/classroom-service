@@ -12,6 +12,7 @@ type AssignService interface {
 	AssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error
 	UnAssignSlot(ctx context.Context, request *UpdateAssginRequest, userID string) error
 	CreateAssignmentTemplate(ctx context.Context, request *UpdateAssginRequest, userID string) error
+	DeleteAssignmentTemplate(ctx context.Context, request *UpdateAssginRequest, userID string) error
 }
 
 type assignService struct {
@@ -210,4 +211,39 @@ func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *U
 		return s.AssignRepository.UpdateAssginTemplate(ctx, existingAssignment.ID, existingAssignment)
 	}
 
+}
+
+func (s *assignService) DeleteAssignmentTemplate(ctx context.Context, request *UpdateAssginRequest, userID string) error {
+
+	if request.SlotNumber < -1 || request.SlotNumber > 15 {
+		return errors.New("slot number must be between 1 and 15")
+	}
+
+	classroomObjID, err := primitive.ObjectIDFromHex(request.ClassroomID)
+	if err != nil {
+		return err
+	}
+
+	if request.Date == "" {
+		return errors.New("date is required")
+	}
+
+	assign, err := s.AssignRepository.GetAssignmentTemplateBySlot(ctx, classroomObjID, request.SlotNumber)
+	if err != nil {
+		return err
+	}
+
+	if assign == nil {
+		return errors.New("assign not found")
+	}
+
+	if request.TeacherID != nil {
+		assign.TeacherID = nil
+	}
+	if request.StudentID != nil {
+		assign.StudentID = nil
+	}
+
+	return s.AssignRepository.UpdateAssginTemplate(ctx, assign.ID, assign)
+	
 }
