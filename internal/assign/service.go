@@ -63,7 +63,7 @@ func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginReq
 	} else {
 		if request.TeacherID != nil {
 			if existingAssignment.StudentID != nil {
-				exists, err := s.AssignRepository.CheckDuplicateAssignmentForDate(ctx, classroomObjID, dateParse, *request.StudentID, *existingAssignment.TeacherID)
+				exists, err := s.AssignRepository.CheckDuplicateAssignmentForDate(ctx, classroomObjID, dateParse, *existingAssignment.StudentID, *request.TeacherID)
 				if err != nil {
 					return err
 				}
@@ -71,11 +71,11 @@ func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginReq
 					return errors.New("student already assigned to teacher")
 				}
 			}
-			existingAssignment.StudentID = request.StudentID
+			existingAssignment.TeacherID = request.TeacherID
 		}
 		if request.StudentID != nil {
 			if existingAssignment.TeacherID != nil {
-				exists, err := s.AssignRepository.CheckDuplicateAssignmentForDate(ctx, classroomObjID, dateParse, *existingAssignment.StudentID, *request.TeacherID)
+				exists, err := s.AssignRepository.CheckDuplicateAssignmentForDate(ctx, classroomObjID, dateParse, *request.StudentID, *existingAssignment.TeacherID)
 				if err != nil {
 					return err
 				}
@@ -83,7 +83,7 @@ func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginReq
 					return errors.New("teacher already assigned to student")
 				}
 			}
-			existingAssignment.TeacherID = request.TeacherID
+			existingAssignment.StudentID = request.StudentID
 		}
 
 		assign := &TeacherStudentAssignment{
