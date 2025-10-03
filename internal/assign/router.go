@@ -12,6 +12,7 @@ func RegisterRoutes(r *gin.Engine, handler *AssignHandler) {
 		assginGroup.POST("/assigns", handler.AssignSlot)
 		assginGroup.POST("/remove/assigns", handler.UnAssignSlot)
 
+		
 		// Assignment Template
 		assginGroup.POST("/assignment-templates", handler.CreateAssignmentTemplate)
 	}
