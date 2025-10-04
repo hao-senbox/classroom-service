@@ -23,7 +23,7 @@ type ClassroomService interface {
 	CreateAssignmentByTemplate(ctx context.Context, req *CreateAssignmentByTemplateRequest) error
 
 	//Assignment
-	GetTeacherAssignments(ctx context.Context, teacherID string, termID string) ([]TeacherAssignmentResponse, error)
+	GetTeacherAssignments(ctx context.Context, userID, organizationID string, termID string) ([]TeacherAssignmentResponse, error)
 }
 
 type classroomService struct {
@@ -372,19 +372,32 @@ func (s *classroomService) CreateAssignmentByTemplate(ctx context.Context, req *
 
 }
 
-func (s *classroomService) GetTeacherAssignments(ctx context.Context, teacherID string, termID string) ([]TeacherAssignmentResponse, error) {
+func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, organizationID string, termID string) ([]TeacherAssignmentResponse, error) {
 
-	if teacherID == "" {
-		return nil, errors.New("teacher id is required")
+	if userID == "" {
+		return nil, errors.New("user id is required")
 	}
 
 	if termID == "" {
 		return nil, errors.New("term id is required")
 	}
 
+	if organizationID == "" {
+		return nil, errors.New("organization id is required")
+	}
+
 	term, err := s.TermService.GetTermByID(ctx, termID)
 	if err != nil {
 		return nil, err
+	}
+
+	teacher, err := s.UserService.GetTeacherInforByOrg(ctx, userID, organizationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if teacher.UserID == "" {
+		return nil, errors.New("teacher not found")
 	}
 
 	startDateParse, err := time.Parse("2006-01-02", term.StartDate)
@@ -406,7 +419,7 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, teacherID 
 
 	for _, a := range assignments {
 
-		if a.TeacherID == nil || *a.TeacherID != teacherID {
+		if a.TeacherID == nil {
 			continue
 		}
 
@@ -433,7 +446,7 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, teacherID 
 				Name: classroom.Name,
 			}
 
-			teacherInfor, err := s.UserService.GetTeacherInfor(ctx, teacherID)
+			teacherInfor, err := s.UserService.GetTeacherInfor(ctx, teacher.UserID)
 			if err != nil {
 				return nil, err
 			}

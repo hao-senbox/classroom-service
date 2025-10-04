@@ -172,7 +172,7 @@ func (h *ClassroomHandler) CreateAssignmentByTemplate(c *gin.Context) {
 
 func (h *ClassroomHandler) GetTeacherAssignments(c *gin.Context) {
 
-	teacherID := c.Query("teacher_id")
+	organizationID := c.Query("organization_id")
 	termID := c.Query("term_id")
 
 	token, exists := c.Get(constants.Token)
@@ -183,7 +183,13 @@ func (h *ClassroomHandler) GetTeacherAssignments(c *gin.Context) {
 
 	ctx := context.WithValue(c, constants.TokenKey, token)
 
-	assignments, err := h.ClassroomService.GetTeacherAssignments(ctx, teacherID, termID)
+	userID, exists := c.Get(constants.UserID)
+	if !exists {
+		helper.SendError(c, 400, fmt.Errorf("user_id not found"), helper.ErrInvalidRequest)
+		return
+	}
+
+	assignments, err := h.ClassroomService.GetTeacherAssignments(ctx, userID.(string), organizationID, termID)
 
 	if err != nil {
 		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
