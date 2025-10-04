@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/hashicorp/consul/api"
@@ -60,7 +61,7 @@ func NewServiceAPI(client *api.Client, serviceName string) *callAPI {
 }
 
 func (s *termService) GetTermByID(ctx context.Context, id string) (*TermInfor, error) {
-	
+
 	token, ok := ctx.Value(constants.TokenKey).(string)
 	if !ok {
 		return nil, fmt.Errorf("token not found in context")
@@ -68,6 +69,7 @@ func (s *termService) GetTermByID(ctx context.Context, id string) (*TermInfor, e
 
 	data, err := s.client.getTermByID(token, id)
 	if err != nil {
+		log.Printf("[ERROR] termService.GetTermByID failed (id=%s): %v", id, err)
 		return nil, err
 	}
 
@@ -75,13 +77,21 @@ func (s *termService) GetTermByID(ctx context.Context, id string) (*TermInfor, e
 		return nil, fmt.Errorf("term not found")
 	}
 
-	term := &TermInfor{
-		ID:        data["id"].(string),
-		StartDate: data["start_date"].(string),
-		EndDate:   data["end_date"].(string),
+	termID, _ := data["id"].(string)
+	startDate, _ := data["start_date"].(string)
+	endDate, _ := data["end_date"].(string)
+
+	if termID == "" || startDate == "" || endDate == "" {
+		log.Printf("[ERROR] termService.GetTermByID invalid data: %+v", data)
+		return nil, fmt.Errorf("invalid term data")
 	}
 
-	return term, nil
+	return &TermInfor{
+		ID:        termID,
+		StartDate: startDate,
+		EndDate:   endDate,
+	}, nil
+
 }
 
 func (c *callAPI) getTermByID(token, id string) (map[string]interface{}, error) {
@@ -95,17 +105,22 @@ func (c *callAPI) getTermByID(token, id string) (map[string]interface{}, error) 
 
 	response, err := c.client.CallAPI(c.clientServer, endpoint, "GET", nil, headers)
 	if err != nil {
-		return nil, err
+		log.Printf("[ERROR] CallAPI failed: %v", err)
+		return nil, fmt.Errorf("call api term service failed: %w", err)
 	}
 
 	var parse map[string]interface{}
 	if err := json.Unmarshal([]byte(response), &parse); err != nil {
-		return nil, err
+		log.Printf("[ERROR] JSON unmarshal failed: %v | raw=%s", err, response)
+		return nil, fmt.Errorf("invalid JSON response from term service: %w", err)
 	}
 
 	dataRaw, ok := parse["data"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected response format")
+		statusCode, _ := parse["status_code"].(float64)
+		errorMsg, _ := parse["error"].(string)
+		log.Printf("[ERROR] Unexpected response format from term service (id=%s). status_code=%v, error=%s, raw=%+v", id, statusCode, errorMsg, parse)
+		return nil, fmt.Errorf("term service returned error (status_code=%v, error=%s)", statusCode, errorMsg)
 	}
 
 	return dataRaw, nil

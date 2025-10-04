@@ -453,7 +453,7 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, teacherID 
 			} else {
 				studentInfo = user.UserInfor{
 					UserID:   *a.StudentID,
-					UserName: "Deleted",
+					UserName: "Unknown",
 				}
 			}
 		}
