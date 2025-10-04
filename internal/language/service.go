@@ -104,7 +104,7 @@ func (g *messageLanguageGateway) GetMessageLanguages(ctx context.Context, typeID
 	if err != nil {
 		return nil, err
 	}
-
+	
 	return resp, nil
 
 }

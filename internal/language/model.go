@@ -7,7 +7,7 @@ type APIGateWayResponse[T any] struct {
 }
 
 type MessageLanguageResponse struct {
-	LangID   uint              `json:"lang_id"`
+	LangID   uint              `json:"language_id"`
 	Contents map[string]string `json:"contents"`
 }
 

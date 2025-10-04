@@ -245,5 +245,5 @@ func (s *assignService) DeleteAssignmentTemplate(ctx context.Context, request *U
 	}
 
 	return s.AssignRepository.UpdateAssginTemplate(ctx, assign.ID, assign)
-	
+
 }
