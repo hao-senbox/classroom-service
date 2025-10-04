@@ -150,5 +150,5 @@ func (h *AssignHandler) DeleteAssignmentTemplate(c *gin.Context) {
 	}
 
 	helper.SendSuccess(c, http.StatusOK, "Delete assignment template successfully", nil)
-	
+
 }

@@ -18,7 +18,7 @@ type AssignRepository interface {
 	GetAssignmentsByClassroomAndDate(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) ([]*TeacherStudentAssignment, error)
 	CountAssignedSlotsTotal(ctx context.Context, classroomID primitive.ObjectID) (int, error)
 	GetAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID) ([]*TeacherStudentAssignment, error)
-
+	GetAssignmentsByStartDateAndEndDate(ctx context.Context, startDate, endDate *time.Time) ([]*TeacherStudentAssignment, error)
 	// Assignments Template
 	GetAssignmentTemplateBySlot(ctx context.Context, classroomID primitive.ObjectID, slotNumber int) (*ClassRoomTemplateAssignment, error)
 	GetAssignmentTemplateByClassroomID(ctx context.Context, classroomID primitive.ObjectID) ([]*ClassRoomTemplateAssignment, error)
@@ -41,12 +41,24 @@ func NewAssignRepository(assginCollection, assignTemplateCollection *mongo.Colle
 
 func (r *assignRepository) CreateAssignment(ctx context.Context, assign *TeacherStudentAssignment) error {
 
-	_, err := r.assginCollection.InsertOne(ctx, assign)
+	filter := bson.M{
+		"class_room_id": assign.ClassRoomID,
+		"slot_number":   assign.SlotNumber,
+		"assign_date":   assign.AssignDate,
+	}
+
+	_, err := r.assginCollection.DeleteMany(ctx, filter)
+	if err != nil {
+		return err
+	}
+	
+	_, err = r.assginCollection.InsertOne(ctx, assign)
 	if err != nil {
 		return err
 	}
 
 	return err
+
 }
 
 func (r *assignRepository) GetAssignmentBySlotAndDate(ctx context.Context, classroomID primitive.ObjectID, slotNumber int, date *time.Time) (*TeacherStudentAssignment, error) {
@@ -201,6 +213,31 @@ func (r *assignRepository) GetAssignmentTemplateByClassroomID(ctx context.Contex
 
 	return results, nil
 
+}
+
+func (r assignRepository) GetAssignmentsByStartDateAndEndDate(ctx context.Context, startDate, endDate *time.Time) ([]*TeacherStudentAssignment, error) {
+
+	filter := bson.M{
+		"assign_date": bson.M{
+			"$gte": startDate,
+			"$lt":  endDate,
+		},
+	}
+
+	cursor, err := r.assginCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cursor.Close(ctx)
+
+	var results []*TeacherStudentAssignment
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+	
 }
 
 func (r *assignRepository) CreateAssignmentTemplate(ctx context.Context, assign *ClassRoomTemplateAssignment) error {

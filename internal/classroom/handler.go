@@ -169,3 +169,27 @@ func (h *ClassroomHandler) CreateAssignmentByTemplate(c *gin.Context) {
 	helper.SendSuccess(c, http.StatusOK, "Create Assignment Successfully", nil)
 
 }
+
+func (h *ClassroomHandler) GetTeacherAssignments(c *gin.Context) {
+
+	teacherID := c.Query("teacher_id")
+	termID := c.Query("term_id")
+
+	token, exists := c.Get(constants.Token)
+	if !exists {
+		helper.SendError(c, 400, fmt.Errorf("token not found"), helper.ErrInvalidRequest)
+		return
+	}
+
+	ctx := context.WithValue(c, constants.TokenKey, token)
+
+	assignments, err := h.ClassroomService.GetTeacherAssignments(ctx, teacherID, termID)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Get teacher assignments successfully", assignments)
+	
+}

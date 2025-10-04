@@ -4,6 +4,7 @@ import (
 	"classroom-service/internal/assign"
 	"classroom-service/internal/language"
 	"classroom-service/internal/leader"
+	"classroom-service/internal/term"
 	"classroom-service/internal/user"
 	"context"
 	"errors"
@@ -20,6 +21,9 @@ type ClassroomService interface {
 	//Classroom Template
 	GetClassroomByIDTemplate(ctx context.Context, id string) (*ClassroomTemplateResponse, error)
 	CreateAssignmentByTemplate(ctx context.Context, req *CreateAssignmentByTemplateRequest) error
+
+	//Assignment
+	GetTeacherAssignments(ctx context.Context, teacherID string, termID string) ([]TeacherAssignmentResponse, error)
 }
 
 type classroomService struct {
@@ -28,19 +32,22 @@ type classroomService struct {
 	UserService         user.UserService
 	LeaderRopitory      leader.LeaderRepository
 	LanguageService     language.MessageLanguageGateway
+	TermService         term.TermService
 }
 
 func NewClassroomService(classroomRepository ClassroomRepository,
 	assignRepository assign.AssignRepository,
 	userService user.UserService,
 	leaderRepository leader.LeaderRepository,
-	languageService language.MessageLanguageGateway) ClassroomService {
+	languageService language.MessageLanguageGateway,
+	termService term.TermService) ClassroomService {
 	return &classroomService{
 		ClassroomRepository: classroomRepository,
 		AssignRepository:    assignRepository,
 		UserService:         userService,
 		LeaderRopitory:      leaderRepository,
 		LanguageService:     languageService,
+		TermService:         termService,
 	}
 }
 
@@ -362,5 +369,109 @@ func (s *classroomService) CreateAssignmentByTemplate(ctx context.Context, req *
 	}
 
 	return nil
+
+}
+
+func (s *classroomService) GetTeacherAssignments(ctx context.Context, teacherID string, termID string) ([]TeacherAssignmentResponse, error) {
+
+	if teacherID == "" {
+		return nil, errors.New("teacher id is required")
+	}
+
+	if termID == "" {
+		return nil, errors.New("term id is required")
+	}
+
+	term, err := s.TermService.GetTermByID(ctx, termID)
+	if err != nil {
+		return nil, err
+	}
+
+	startDateParse, err := time.Parse("2006-01-02", term.StartDate)
+	if err != nil {
+		return nil, err
+	}
+
+	endDateParse, err := time.Parse("2006-01-02", term.EndDate)
+	if err != nil {
+		return nil, err
+	}
+
+	assignments, err := s.AssignRepository.GetAssignmentsByStartDateAndEndDate(ctx, &startDateParse, &endDateParse)
+	if err != nil {
+		return nil, err
+	}
+
+	classroomMap := make(map[string]*TeacherAssignmentResponse)
+
+	for _, a := range assignments {
+
+		if a.TeacherID == nil || *a.TeacherID != teacherID {
+			continue
+		}
+
+		classroomID := a.ClassRoomID.Hex()
+
+		if _, ok := classroomMap[classroomID]; !ok {
+
+			classroomIDParse, err := primitive.ObjectIDFromHex(classroomID)
+			if err != nil {
+				return nil, err
+			}
+
+			classroom, err := s.ClassroomRepository.GetClassroomByID(ctx, classroomIDParse)
+			if err != nil {
+				return nil, err
+			}
+
+			if classroom == nil {
+				return nil, errors.New("classroom not found")
+			}
+
+			clasroomRes := ClassroomResponse{
+				ID:   classroomID,
+				Name: classroom.Name,
+			}
+
+			teacherInfor, err := s.UserService.GetTeacherInfor(ctx, teacherID)
+			if err != nil {
+				return nil, err
+			}
+
+			classroomMap[classroomID] = &TeacherAssignmentResponse{
+				Classroom:   clasroomRes,
+				Teacher:     *teacherInfor,
+				Assignments: []Assignment{},
+			}
+		}
+
+		var studentInfo user.UserInfor
+		if a.StudentID != nil {
+			st, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
+			if err == nil && st != nil {
+				studentInfo = *st
+			} else {
+				studentInfo = user.UserInfor{
+					UserID:   *a.StudentID,
+					UserName: "Deleted",
+				}
+			}
+		}
+
+		assignmentItem := Assignment{
+			ID:         a.ID.Hex(),
+			AssignDate: a.AssignDate.Format("2006-01-02"),
+			Student:    studentInfo,
+		}
+
+		classroomMap[classroomID].Assignments = append(classroomMap[classroomID].Assignments, assignmentItem)
+	}
+
+	var results []TeacherAssignmentResponse
+	for _, v := range classroomMap {
+		results = append(results, *v)
+	}
+
+	return results, nil
 
 }

@@ -19,3 +19,26 @@ type SlotAssignmentResponse struct {
 	CreatedAt    *time.Time      `json:"created_at,omitempty"`
 	UpdatedAt    *time.Time      `json:"updated_at,omitempty"`
 }
+
+type TeacherAssignmentResponse struct {
+	Classroom   ClassroomResponse   `json:"classroom"`
+	Teacher     user.UserInfor      `json:"teacher"`
+	Assignments []Assignment `json:"assignments"`
+}
+
+type ClassroomResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+type Assignment struct {
+	ID         string         `json:"id"`
+	AssignDate string         `json:"assign_date"`
+	Student    user.UserInfor `json:"student"`
+}
+
+type Term struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	StartDate string `json:"start_date"`
+	EndDate   string `json:"end_date"`
+}

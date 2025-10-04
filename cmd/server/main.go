@@ -8,6 +8,7 @@ import (
 	"classroom-service/internal/leader"
 	"classroom-service/internal/region"
 	"classroom-service/internal/room"
+	"classroom-service/internal/term"
 	"classroom-service/internal/user"
 	"classroom-service/pkg/consul"
 	"classroom-service/pkg/zap"
@@ -80,6 +81,7 @@ func main() {
 	roomService := room.NewRoomService(consulClient)
 	userService := user.NewUserService(consulClient)
 	languageService := language.NewUserService(consulClient)
+	termService := term.NewTermService(consulClient)
 
 	regionCollection := mongoClient.Database(cfg.MongoDB).Collection("region")
 	classroomCollection := mongoClient.Database(cfg.MongoDB).Collection("classroom")
@@ -97,7 +99,7 @@ func main() {
 	assignHandler := assign.NewAssignHandler(assignService)
 
 	classroomRepository := classroom.NewClassroomRepository(classroomCollection)
-	classroomService := classroom.NewClassroomService(classroomRepository, assignRepository, userService, leaderRepository, languageService)
+	classroomService := classroom.NewClassroomService(classroomRepository, assignRepository, userService, leaderRepository, languageService, termService)
 	classroomHandler := classroom.NewClassroomHandler(classroomService)
 
 	regionRepository := region.NewRegionRepository(regionCollection)

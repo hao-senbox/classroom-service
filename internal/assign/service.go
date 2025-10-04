@@ -224,10 +224,6 @@ func (s *assignService) DeleteAssignmentTemplate(ctx context.Context, request *U
 		return err
 	}
 
-	if request.Date == "" {
-		return errors.New("date is required")
-	}
-
 	assign, err := s.AssignRepository.GetAssignmentTemplateBySlot(ctx, classroomObjID, request.SlotNumber)
 	if err != nil {
 		return err
