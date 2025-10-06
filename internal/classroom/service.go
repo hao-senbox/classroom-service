@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,6 +19,7 @@ type ClassroomService interface {
 	CreateClassroom(ctx context.Context, req *CreateClassroomRequest, userID string) (string, error)
 	UpdateClassroom(ctx context.Context, req *UpdateClassroomRequest, id string) error
 	GetClassroomsByUserID(ctx context.Context, userID string) ([]string, error)
+	GetClassroomByID(ctx context.Context, id string) (*ClassroomScheduleResponse, error)
 	//Classroom Template
 	GetClassroomByIDTemplate(ctx context.Context, id string) (*ClassroomTemplateResponse, error)
 	CreateAssignmentByTemplate(ctx context.Context, req *CreateAssignmentByTemplateRequest) error
@@ -222,10 +224,18 @@ func (s *classroomService) GetClassroomByIDTemplate(ctx context.Context, id stri
 			if err != nil {
 				return nil, err
 			}
-			leaderInfor = &user.UserInfor{
-				UserID:   leaderInforData.UserID,
-				UserName: leaderInforData.UserName,
-				Avartar:  leaderInforData.Avartar,
+			if leaderInforData != nil {
+				leaderInfor = &user.UserInfor{
+					UserID:   leaderInforData.UserID,
+					UserName: leaderInforData.UserName,
+					Avartar:  leaderInforData.Avartar,
+				}
+			} else {
+				leaderInfor = &user.UserInfor{
+					UserID:   "",
+					UserName: "",
+					Avartar:  user.Avatar{},
+				}
 			}
 
 		case "staff":
@@ -233,10 +243,18 @@ func (s *classroomService) GetClassroomByIDTemplate(ctx context.Context, id stri
 			if err != nil {
 				return nil, err
 			}
-			leaderInfor = &user.UserInfor{
-				UserID:   leaderInforData.UserID,
-				UserName: leaderInforData.UserName,
-				Avartar:  leaderInforData.Avartar,
+			if leaderInforData != nil {
+				leaderInfor = &user.UserInfor{
+					UserID:   leaderInforData.UserID,
+					UserName: leaderInforData.UserName,
+					Avartar:  leaderInforData.Avartar,
+				}
+			} else {
+				leaderInfor = &user.UserInfor{
+					UserID:   "",
+					UserName: "",
+					Avartar:  user.Avatar{},
+				}
 			}
 		}
 	} else {
@@ -263,7 +281,7 @@ func (s *classroomService) GetClassroomByIDTemplate(ctx context.Context, id stri
 			} else {
 				assignmentResp.Teacher = &user.UserInfor{
 					UserID:   *assignment.TeacherID,
-					UserName: "Deleted",
+					UserName: "",
 				}
 			}
 		}
@@ -275,7 +293,7 @@ func (s *classroomService) GetClassroomByIDTemplate(ctx context.Context, id stri
 			} else {
 				assignmentResp.Student = &user.UserInfor{
 					UserID:   *assignment.StudentID,
-					UserName: "Deleted",
+					UserName: "",
 				}
 			}
 		}
@@ -335,7 +353,7 @@ func (s *classroomService) CreateAssignmentByTemplate(ctx context.Context, req *
 		for d := startParse; d.Before(endParse); d = d.AddDate(0, 0, 1) {
 			leaderData := leader.Leader{
 				ID:          primitive.NewObjectID(),
-				Owner:       *leaderTemplate.Owner,
+				Owner:       leaderTemplate.Owner,
 				ClassRoomID: leaderTemplate.ClassRoomID,
 				Date:        d,
 				CreatedAt:   time.Now(),
@@ -388,7 +406,7 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 
 	term, err := s.TermService.GetTermByID(ctx, termID)
 	if err != nil {
-		return nil, err
+		log.Printf("[ERROR] termService.GetTermByID failed (id=%s): %v", termID, err)
 	}
 
 	teacher, err := s.UserService.GetTeacherInforByOrg(ctx, userID, organizationID)
@@ -486,5 +504,160 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 	}
 
 	return results, nil
+
+}
+
+func (s *classroomService) GetClassroomByID(ctx context.Context, id string) (*ClassroomScheduleResponse, error) {
+
+	if id == "" {
+		return nil, errors.New("classroom id is required")
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+
+	classroom, err := s.ClassroomRepository.GetClassroomByID(ctx, objectID)
+	if err != nil {
+		return nil, err
+	}
+
+	if classroom == nil {
+		return nil, errors.New("classroom not found")
+	}
+
+	assignments, err := s.AssignRepository.GetAssignmentsByClassroomID(ctx, objectID)
+	if err != nil {
+		return nil, err
+	}
+
+	leaderByClasses, err := s.LeaderRopitory.GetLeaderByClassID(ctx, objectID)
+	if err != nil {
+		return nil, err
+	}
+
+	scheduleMap := make(map[string]*DailySchedule)
+
+	for _, leader := range leaderByClasses {
+		if leader != nil && leader.Owner != nil {
+			date := leader.Date.Format("2006-01-02")
+			switch leader.Owner.OwnerRole {
+			case "teacher":
+				leaderInforData, err := s.UserService.GetTeacherInfor(ctx, leader.Owner.OwnerID)
+				if err != nil {
+					return nil, err
+				}
+
+				var leaderInfor *user.UserInfor
+
+				if leaderInforData != nil {
+					leaderInfor = &user.UserInfor{
+						UserID:   leaderInforData.UserID,
+						UserName: leaderInforData.UserName,
+						Avartar:  leaderInforData.Avartar,
+					}
+				} else {
+					leaderInfor = &user.UserInfor{
+						UserID:   "",
+						UserName: "",
+						Avartar:  user.Avatar{},
+					}
+				}
+
+				scheduleMap[date] = &DailySchedule{
+					Date:        date,
+					Leader:      leaderInfor,
+					Assignments: []*SlotAssignmentResponse{},
+				}
+
+			case "staff":
+				leaderInforData, err := s.UserService.GetStaffInfor(ctx, leader.Owner.OwnerID)
+				if err != nil {
+					return nil, err
+				}
+
+				var leaderInfor *user.UserInfor
+
+				if leaderInforData != nil {
+					leaderInfor = &user.UserInfor{
+						UserID:   leaderInforData.UserID,
+						UserName: leaderInforData.UserName,
+						Avartar:  leaderInforData.Avartar,
+					}
+				} else {
+					leaderInfor = &user.UserInfor{
+						UserID:   "",
+						UserName: "",
+						Avartar:  user.Avatar{},
+					}
+				}
+				scheduleMap[date] = &DailySchedule{
+					Date:        date,
+					Leader:      leaderInfor,
+					Assignments: []*SlotAssignmentResponse{},
+				}
+			}
+		}
+	}
+
+	for _, a := range assignments {
+		date := a.AssignDate.Format("2006-01-02")
+		if _, ok := scheduleMap[date]; !ok {
+			scheduleMap[date] = &DailySchedule{
+				Date:        date,
+				Leader:      nil,
+				Assignments: []*SlotAssignmentResponse{},
+			}
+		}
+
+		var teacherInfo *user.UserInfor
+		if a.TeacherID != nil && *a.TeacherID != "" {
+			info, err := s.UserService.GetTeacherInfor(ctx, *a.TeacherID)
+			if err == nil && info != nil {
+				teacherInfo = info
+			} else {
+				teacherInfo = &user.UserInfor{
+					UserID:   "",
+					UserName: "",
+					Avartar:  user.Avatar{},
+				}
+			}
+		}
+
+		var studentInfo *user.UserInfor
+		if a.StudentID != nil && *a.StudentID != "" {
+			info, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
+			if err == nil && info != nil {
+				studentInfo = info
+			} else {
+				studentInfo = &user.UserInfor{
+					UserID:   "",
+					UserName: "",
+					Avartar:  user.Avatar{},
+				}
+			}
+		}
+
+		id := a.ID.Hex()
+
+		scheduleMap[date].Assignments = append(scheduleMap[date].Assignments, &SlotAssignmentResponse{
+			AssignmentID: &id,
+			SlotNumber:   a.SlotNumber,
+			Teacher:      teacherInfo,
+			Student:      studentInfo,
+		})
+	}
+
+	var schedule []*DailySchedule
+	for _, v := range scheduleMap {
+		schedule = append(schedule, v)
+	}
+
+	return &ClassroomScheduleResponse{
+		ClassroomID: classroom.ID.Hex(),
+		ClassName:   classroom.Name,
+		Schedule:    schedule,
+	}, nil
 
 }

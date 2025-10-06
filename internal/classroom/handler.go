@@ -55,6 +55,32 @@ func (h *ClassroomHandler) CreateClassroom(c *gin.Context) {
 
 }
 
+func (h *ClassroomHandler) GetClassroomByID(c *gin.Context) {
+
+	id := c.Param("id")
+	if id == "" {
+		helper.SendError(c, http.StatusBadRequest, errors.New("id is required"), "INVALID_REQUEST")
+		return
+	}
+
+	token, exists := c.Get(constants.Token)
+	if !exists {
+		helper.SendError(c, 400, fmt.Errorf("token not found"), helper.ErrInvalidRequest)
+		return
+	}
+
+	ctx := context.WithValue(c, constants.TokenKey, token)
+
+	classroom, err := h.ClassroomService.GetClassroomByID(ctx, id)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Get Classroom Successfully", classroom)
+
+}
 func (h *ClassroomHandler) UpdateClassroom(c *gin.Context) {
 
 	var req UpdateClassroomRequest

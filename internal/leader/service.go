@@ -52,7 +52,7 @@ func (s *leaderService) AddLeader(c *gin.Context, req *CreateLeaderRequest) erro
 
 	data := &Leader{
 		ID:          primitive.NewObjectID(),
-		Owner:       req.Owner,
+		Owner:       &req.Owner,
 		ClassRoomID: objClassroomID,
 		Date:        dateParse,
 		CreatedAt:   time.Now(),

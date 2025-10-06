@@ -10,6 +10,7 @@ func RegisterRoutes(r *gin.Engine, handler *ClassroomHandler) {
 	classroomGroup := r.Group("/api/v1/admin/classrooms", middleware.Secured())
 	{
 		classroomGroup.POST("", handler.CreateClassroom)
+		classroomGroup.GET("/:id", handler.GetClassroomByID)
 		classroomGroup.PUT("/:id", handler.UpdateClassroom)
 
 		// Classroom Template

@@ -6,14 +6,14 @@ import (
 )
 
 type ClassroomTemplateResponse struct {
-	ClassroomID    string                    `json:"classroom_id"`
+	ClassroomID    string                    `json:"classroom_id,omitempty"`
 	Leader         *user.UserInfor           `json:"leader"`
 	SlotAssignment []*SlotAssignmentResponse `json:"slot_assignment"`
 }
 
 type SlotAssignmentResponse struct {
-	SlotNumber   int             `json:"slot_number"`
 	AssignmentID *string         `json:"assignment_id,omitempty"`
+	SlotNumber   int             `json:"slot_number"`
 	Teacher      *user.UserInfor `json:"teacher"`
 	Student      *user.UserInfor `json:"student"`
 	CreatedAt    *time.Time      `json:"created_at,omitempty"`
@@ -21,9 +21,9 @@ type SlotAssignmentResponse struct {
 }
 
 type TeacherAssignmentResponse struct {
-	Classroom   ClassroomResponse   `json:"classroom"`
-	Teacher     user.UserInfor      `json:"teacher"`
-	Assignments []Assignment `json:"assignments"`
+	Classroom   ClassroomResponse `json:"classroom"`
+	Teacher     user.UserInfor    `json:"teacher"`
+	Assignments []Assignment      `json:"assignments"`
 }
 
 type ClassroomResponse struct {
@@ -41,4 +41,16 @@ type Term struct {
 	Name      string `json:"name"`
 	StartDate string `json:"start_date"`
 	EndDate   string `json:"end_date"`
+}
+
+type ClassroomScheduleResponse struct {
+	ClassroomID string           `json:"classroom_id"`
+	ClassName   string           `json:"class_name"`
+	Schedule    []*DailySchedule `json:"schedule"`
+}
+
+type DailySchedule struct {
+	Date        string                    `json:"date"`
+	Leader      *user.UserInfor           `json:"leader,omitempty"`
+	Assignments []*SlotAssignmentResponse `json:"assignments"`
 }

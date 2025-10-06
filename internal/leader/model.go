@@ -8,7 +8,7 @@ import (
 
 type Leader struct {
 	ID          primitive.ObjectID `json:"id" bson:"_id"`
-	Owner       Owner              `json:"owner" bson:"owner"`
+	Owner       *Owner              `json:"owner" bson:"owner"`
 	Date        time.Time          `json:"date" bson:"date"`
 	ClassRoomID primitive.ObjectID `json:"class_room_id" bson:"class_room_id"`
 	CreatedAt   time.Time          `json:"created_at" bson:"created_at"`

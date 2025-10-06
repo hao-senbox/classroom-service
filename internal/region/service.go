@@ -123,7 +123,7 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 				}
 			}
 
-			leader, err := r.LeaderRepository.GetLeaderByClassID(ctx, classroom.ID, &dateParse)
+			leader, err := r.LeaderRepository.GetLeaderByClassIDAndDate(ctx, classroom.ID, &dateParse)
 			if err != nil {
 				return nil, err
 			}
@@ -290,7 +290,7 @@ func (r *regionService) GetRegion(ctx context.Context, id string, date string) (
 			}
 		}
 
-		leader, err := r.LeaderRepository.GetLeaderByClassID(ctx, classroom.ID, &dateParse)
+		leader, err := r.LeaderRepository.GetLeaderByClassIDAndDate(ctx, classroom.ID, &dateParse)
 		if err != nil {
 			return nil, err
 		}

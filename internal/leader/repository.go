@@ -11,7 +11,8 @@ import (
 
 type LeaderRepository interface {
 	CreateLeader(ctx context.Context, leader *Leader) error
-	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) (*Leader, error)
+	GetLeaderByClassIDAndDate(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) (*Leader, error)
+	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) ([]*Leader, error)
 	DeleteLeader(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) error
 	// Leader Template
 	CreateLeaderTemplate(ctx context.Context, leader *LeaderTemplate) error
@@ -51,7 +52,7 @@ func (r *leaderRepository) CreateLeader(ctx context.Context, leader *Leader) err
 	return nil
 }
 
-func (r *leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) (*Leader, error) {
+func (r *leaderRepository) GetLeaderByClassIDAndDate(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) (*Leader, error) {
 
 	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 	end := start.Add(24 * time.Hour)
@@ -75,6 +76,27 @@ func (r *leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID p
 
 	return &leader, nil
 
+}
+
+func (r leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) ([]*Leader, error) {
+	
+	filter := bson.M{
+		"class_room_id": classroomID,
+	}
+
+	cursor, err := r.leaderCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []*Leader
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+	
 }
 
 func (r *leaderRepository) DeleteLeader(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) error {
