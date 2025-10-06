@@ -56,6 +56,9 @@ func (h *ClassroomHandler) CreateClassroom(c *gin.Context) {
 }
 
 func (h *ClassroomHandler) GetClassroomByID(c *gin.Context) {
+	
+	start := c.Query("start")
+	end := c.Query("end")
 
 	id := c.Param("id")
 	if id == "" {
@@ -71,7 +74,7 @@ func (h *ClassroomHandler) GetClassroomByID(c *gin.Context) {
 
 	ctx := context.WithValue(c, constants.TokenKey, token)
 
-	classroom, err := h.ClassroomService.GetClassroomByID(ctx, id)
+	classroom, err := h.ClassroomService.GetClassroomByID(ctx, id, start, end)
 
 	if err != nil {
 		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")

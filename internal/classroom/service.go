@@ -19,7 +19,7 @@ type ClassroomService interface {
 	CreateClassroom(ctx context.Context, req *CreateClassroomRequest, userID string) (string, error)
 	UpdateClassroom(ctx context.Context, req *UpdateClassroomRequest, id string) error
 	GetClassroomsByUserID(ctx context.Context, userID string) ([]string, error)
-	GetClassroomByID(ctx context.Context, id string) (*ClassroomScheduleResponse, error)
+	GetClassroomByID(ctx context.Context, id, start, end string) (*ClassroomScheduleResponse, error)
 	//Classroom Template
 	GetClassroomByIDTemplate(ctx context.Context, id string) (*ClassroomTemplateResponse, error)
 	CreateAssignmentByTemplate(ctx context.Context, req *CreateAssignmentByTemplateRequest) error
@@ -507,10 +507,28 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 
 }
 
-func (s *classroomService) GetClassroomByID(ctx context.Context, id string) (*ClassroomScheduleResponse, error) {
+func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end string) (*ClassroomScheduleResponse, error) {
 
 	if id == "" {
 		return nil, errors.New("classroom id is required")
+	}
+
+	if start == "" {
+		return nil, errors.New("start date is required")
+	}
+
+	if end == "" {
+		return nil, errors.New("end date is required")
+	}
+
+	startParse, err := time.Parse("2006-01-02", start)
+	if err != nil {
+		return nil, err
+	}
+
+	endParse, err := time.Parse("2006-01-02", end)
+	if err != nil {
+		return nil, err
 	}
 
 	objectID, err := primitive.ObjectIDFromHex(id)
@@ -527,12 +545,12 @@ func (s *classroomService) GetClassroomByID(ctx context.Context, id string) (*Cl
 		return nil, errors.New("classroom not found")
 	}
 
-	assignments, err := s.AssignRepository.GetAssignmentsByClassroomID(ctx, objectID)
+	assignments, err := s.AssignRepository.GetAssignmentsByClassroomID(ctx, objectID, &startParse, &endParse)
 	if err != nil {
 		return nil, err
 	}
 
-	leaderByClasses, err := s.LeaderRopitory.GetLeaderByClassID(ctx, objectID)
+	leaderByClasses, err := s.LeaderRopitory.GetLeaderByClassID(ctx, objectID, &startParse, &endParse)
 	if err != nil {
 		return nil, err
 	}

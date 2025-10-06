@@ -12,7 +12,7 @@ import (
 type LeaderRepository interface {
 	CreateLeader(ctx context.Context, leader *Leader) error
 	GetLeaderByClassIDAndDate(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) (*Leader, error)
-	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) ([]*Leader, error)
+	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) ([]*Leader, error)
 	DeleteLeader(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) error
 	// Leader Template
 	CreateLeaderTemplate(ctx context.Context, leader *LeaderTemplate) error
@@ -78,10 +78,14 @@ func (r *leaderRepository) GetLeaderByClassIDAndDate(ctx context.Context, classr
 
 }
 
-func (r leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID) ([]*Leader, error) {
+func (r leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) ([]*Leader, error) {
 	
 	filter := bson.M{
 		"class_room_id": classroomID,
+		"date": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
 	}
 
 	cursor, err := r.leaderCollection.Find(ctx, filter)
@@ -96,7 +100,7 @@ func (r leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID pr
 	}
 
 	return results, nil
-	
+
 }
 
 func (r *leaderRepository) DeleteLeader(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) error {
