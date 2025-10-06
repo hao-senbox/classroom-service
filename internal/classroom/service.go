@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -671,6 +672,10 @@ func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end 
 	for _, v := range scheduleMap {
 		schedule = append(schedule, v)
 	}
+
+	sort.Slice(schedule, func(i, j int) bool {
+		return schedule[i].Date < schedule[j].Date
+	})
 
 	return &ClassroomScheduleResponse{
 		ClassroomID: classroom.ID.Hex(),
