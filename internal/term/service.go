@@ -122,6 +122,6 @@ func (c *callAPI) getTermByID(token, id string) (map[string]interface{}, error) 
 		log.Printf("[ERROR] Unexpected response format from term service (id=%s). status_code=%v, error=%s, raw=%+v", id, statusCode, errorMsg, parse)
 		return nil, fmt.Errorf("term service returned error (status_code=%v, error=%s)", statusCode, errorMsg)
 	}
-
+	fmt.Printf("dataRaw: %v\n", dataRaw)
 	return dataRaw, nil
 }

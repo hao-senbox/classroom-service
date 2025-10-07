@@ -71,6 +71,9 @@ func main() {
 		logger.Fatalf("Dependency not ready: %v", err)
 	}
 
+	if err := waitPassing(consulClient, "term-service", 60*time.Second); err != nil {
+		logger.Fatalf("Dependency not ready: %v", err)
+	}
 	// c := cron.New(cron.WithSeconds())
 	// assginCollection := mongoClient.Database(cfg.MongoDB).Collection("assgin")
 	// systemConfig := mongoClient.Database(cfg.MongoDB).Collection("system_config")

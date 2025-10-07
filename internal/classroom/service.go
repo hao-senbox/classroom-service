@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"sort"
 	"time"
 
@@ -20,7 +21,7 @@ type ClassroomService interface {
 	CreateClassroom(ctx context.Context, req *CreateClassroomRequest, userID string) (string, error)
 	UpdateClassroom(ctx context.Context, req *UpdateClassroomRequest, id string) error
 	GetClassroomsByUserID(ctx context.Context, userID string) ([]string, error)
-	GetClassroomByID(ctx context.Context, id, start, end string) (*ClassroomScheduleResponse, error)
+	GetClassroomByID(ctx context.Context, id, start, end string, page, limit int) (*ClassroomScheduleResponse, error)
 	//Classroom Template
 	GetClassroomByIDTemplate(ctx context.Context, id string) (*ClassroomTemplateResponse, error)
 	CreateAssignmentByTemplate(ctx context.Context, req *CreateAssignmentByTemplateRequest) error
@@ -477,6 +478,17 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 			}
 		}
 
+		if classroomMap[classroomID].SeenStudents == nil {
+			classroomMap[classroomID].SeenStudents = make(map[string]bool)
+		}
+
+		if a.StudentID != nil {
+			if classroomMap[classroomID].SeenStudents[*a.StudentID] {
+				continue
+			}
+			classroomMap[classroomID].SeenStudents[*a.StudentID] = true
+		}
+
 		var studentInfo user.UserInfor
 		if a.StudentID != nil {
 			st, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
@@ -508,7 +520,7 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 
 }
 
-func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end string) (*ClassroomScheduleResponse, error) {
+func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end string, page, limit int) (*ClassroomScheduleResponse, error) {
 
 	if id == "" {
 		return nil, errors.New("classroom id is required")
@@ -551,7 +563,12 @@ func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end 
 		return nil, err
 	}
 
-	leaderByClasses, err := s.LeaderRopitory.GetLeaderByClassID(ctx, objectID, &startParse, &endParse)
+	leaderByClasses, err := s.LeaderRopitory.GetLeaderByClassID(ctx, objectID, &startParse, &endParse, page, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	count, err := s.LeaderRopitory.CountLeaderByClassroomID(ctx, objectID, &startParse, &endParse)
 	if err != nil {
 		return nil, err
 	}
@@ -621,13 +638,11 @@ func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end 
 	}
 
 	for _, a := range assignments {
+		
 		date := a.AssignDate.Format("2006-01-02")
+
 		if _, ok := scheduleMap[date]; !ok {
-			scheduleMap[date] = &DailySchedule{
-				Date:        date,
-				Leader:      nil,
-				Assignments: []*SlotAssignmentResponse{},
-			}
+			continue
 		}
 
 		var teacherInfo *user.UserInfor
@@ -681,6 +696,12 @@ func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end 
 		ClassroomID: classroom.ID.Hex(),
 		ClassName:   classroom.Name,
 		Schedule:    schedule,
+		Pagination: Pagination{
+			TotalCount: int64(count),
+			TotalPages: int64(math.Ceil(float64(count) / float64(limit))),
+			Page:       int64(page),
+			Limit:      int64(limit),
+		},
 	}, nil
 
 }

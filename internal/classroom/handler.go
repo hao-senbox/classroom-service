@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -56,9 +57,15 @@ func (h *ClassroomHandler) CreateClassroom(c *gin.Context) {
 }
 
 func (h *ClassroomHandler) GetClassroomByID(c *gin.Context) {
-	
+
 	start := c.Query("start")
 	end := c.Query("end")
+
+	pageStr := c.Query("page")
+	limitStr := c.Query("limit")
+
+	page, _ := strconv.Atoi(pageStr)
+	limit, _ := strconv.Atoi(limitStr)
 
 	id := c.Param("id")
 	if id == "" {
@@ -74,7 +81,7 @@ func (h *ClassroomHandler) GetClassroomByID(c *gin.Context) {
 
 	ctx := context.WithValue(c, constants.TokenKey, token)
 
-	classroom, err := h.ClassroomService.GetClassroomByID(ctx, id, start, end)
+	classroom, err := h.ClassroomService.GetClassroomByID(ctx, id, start, end, page, limit)
 
 	if err != nil {
 		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
@@ -226,5 +233,5 @@ func (h *ClassroomHandler) GetTeacherAssignments(c *gin.Context) {
 	}
 
 	helper.SendSuccess(c, http.StatusOK, "Get teacher assignments successfully", assignments)
-	
+
 }

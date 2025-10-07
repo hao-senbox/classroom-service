@@ -7,13 +7,15 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type LeaderRepository interface {
 	CreateLeader(ctx context.Context, leader *Leader) error
 	GetLeaderByClassIDAndDate(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) (*Leader, error)
-	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) ([]*Leader, error)
+	GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time, page, limit int) ([]*Leader, error)
 	DeleteLeader(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) error
+	CountLeaderByClassroomID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) (int, error)
 	// Leader Template
 	CreateLeaderTemplate(ctx context.Context, leader *LeaderTemplate) error
 	DeleteLeaderTemplate(ctx context.Context, classroomID primitive.ObjectID) error
@@ -78,8 +80,23 @@ func (r *leaderRepository) GetLeaderByClassIDAndDate(ctx context.Context, classr
 
 }
 
-func (r leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) ([]*Leader, error) {
-	
+func (r leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time, page, limit int) ([]*Leader, error) {
+
+	if page == 0 {
+		page = 1
+	}
+
+	if limit == 0 {
+		limit = 15
+	}
+
+	skip := (page - 1) * limit
+
+	opts := options.Find().
+		SetSort(bson.D{{Key: "date", Value: 1}}).
+		SetSkip(int64(skip)).
+		SetLimit(int64(limit))
+
 	filter := bson.M{
 		"class_room_id": classroomID,
 		"date": bson.M{
@@ -88,7 +105,7 @@ func (r leaderRepository) GetLeaderByClassID(ctx context.Context, classroomID pr
 		},
 	}
 
-	cursor, err := r.leaderCollection.Find(ctx, filter)
+	cursor, err := r.leaderCollection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +138,24 @@ func (r *leaderRepository) DeleteLeader(ctx context.Context, classroomID primiti
 
 }
 
+func (r *leaderRepository) CountLeaderByClassroomID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) (int, error) {
+
+	filter := bson.M{
+		"class_room_id": classroomID,
+		"date": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
+	}
+
+	count, err := r.leaderCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(count), nil
+	
+}
 func (r *leaderRepository) CreateLeaderTemplate(ctx context.Context, leader *LeaderTemplate) error {
 
 	filter := bson.M{

@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type AssignRepository interface {
@@ -19,6 +20,7 @@ type AssignRepository interface {
 	CountAssignedSlotsTotal(ctx context.Context, classroomID primitive.ObjectID) (int, error)
 	GetAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) ([]*TeacherStudentAssignment, error)
 	GetAssignmentsByStartDateAndEndDate(ctx context.Context, startDate, endDate *time.Time) ([]*TeacherStudentAssignment, error)
+	CountAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) (int, error)
 	// Assignments Template
 	GetAssignmentTemplateBySlot(ctx context.Context, classroomID primitive.ObjectID, slotNumber int) (*ClassRoomTemplateAssignment, error)
 	GetAssignmentTemplateByClassroomID(ctx context.Context, classroomID primitive.ObjectID) ([]*ClassRoomTemplateAssignment, error)
@@ -51,7 +53,7 @@ func (r *assignRepository) CreateAssignment(ctx context.Context, assign *Teacher
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = r.assginCollection.InsertOne(ctx, assign)
 	if err != nil {
 		return err
@@ -157,6 +159,7 @@ func (r *assignRepository) CountAssignedSlotsTotal(ctx context.Context, classroo
 
 func (r *assignRepository) GetAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) ([]*TeacherStudentAssignment, error) {
 
+
 	filter := bson.M{
 		"class_room_id": classroomID,
 		"assign_date": bson.M{
@@ -165,7 +168,10 @@ func (r *assignRepository) GetAssignmentsByClassroomID(ctx context.Context, clas
 		},
 	}
 
-	cursor, err := r.assginCollection.Find(ctx, filter)
+	opts := options.Find().
+		SetSort(bson.D{{Key: "assign_date", Value: 1}}) 
+
+	cursor, err := r.assginCollection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -178,6 +184,25 @@ func (r *assignRepository) GetAssignmentsByClassroomID(ctx context.Context, clas
 	}
 
 	return results, nil
+
+}
+
+func (r *assignRepository) CountAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) (int, error) {
+
+	filter := bson.M{
+		"class_room_id": classroomID,
+		"assign_date": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
+	}
+
+	count, err := r.assginCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(count), nil
 
 }
 
@@ -243,7 +268,7 @@ func (r assignRepository) GetAssignmentsByStartDateAndEndDate(ctx context.Contex
 	}
 
 	return results, nil
-	
+
 }
 
 func (r *assignRepository) CreateAssignmentTemplate(ctx context.Context, assign *ClassRoomTemplateAssignment) error {

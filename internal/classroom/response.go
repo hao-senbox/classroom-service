@@ -21,9 +21,10 @@ type SlotAssignmentResponse struct {
 }
 
 type TeacherAssignmentResponse struct {
-	Classroom   ClassroomResponse `json:"classroom"`
-	Teacher     user.UserInfor    `json:"teacher"`
-	Assignments []Assignment      `json:"assignments"`
+	Classroom    ClassroomResponse `json:"classroom"`
+	Teacher      user.UserInfor    `json:"teacher"`
+	Assignments  []Assignment      `json:"assignments"`
+	SeenStudents map[string]bool   `json:"-"`
 }
 
 type ClassroomResponse struct {
@@ -47,10 +48,18 @@ type ClassroomScheduleResponse struct {
 	ClassroomID string           `json:"classroom_id"`
 	ClassName   string           `json:"class_name"`
 	Schedule    []*DailySchedule `json:"schedule"`
+	Pagination  Pagination       `json:"pagination"`
 }
 
 type DailySchedule struct {
 	Date        string                    `json:"date"`
 	Leader      *user.UserInfor           `json:"leader,omitempty"`
 	Assignments []*SlotAssignmentResponse `json:"assignments"`
+}
+
+type Pagination struct {
+	TotalCount int64 `json:"total_count"`
+	TotalPages int64 `json:"total_pages"`
+	Page       int64 `json:"page"`
+	Limit      int64 `json:"limit"`
 }
