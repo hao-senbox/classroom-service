@@ -158,12 +158,13 @@ func (r *regionService) GetAllRegions(ctx context.Context, organizationID string
 				return nil, err
 			}
 
-			var messageLanguage []language.MessageLanguageResponse
-			messageLanguage, err = r.LanguageService.GetMessageLanguages(ctx, classroom.ID.Hex())
-			if err != nil {
-				messageLanguage = nil
-			}
+			var messageLanguage = make([]language.MessageLanguageResponse, 0)
+			messageLanguageData, _ := r.LanguageService.GetMessageLanguages(ctx, classroom.ID.Hex())
 
+			if messageLanguageData != nil {
+				messageLanguage = messageLanguageData
+			}
+			
 			assignmentResponses := make([]*SlotAssignmentResponse, 0)
 			for _, assignment := range allAssignments {
 				assignmentID := assignment.ID.Hex()
