@@ -21,7 +21,6 @@ type SlotAssignmentResponse struct {
 }
 
 type TeacherAssignmentResponse struct {
-	Classroom    ClassroomResponse `json:"classroom"`
 	Teacher      user.UserInfor    `json:"teacher"`
 	Assignments  []Assignment      `json:"assignments"`
 	SeenStudents map[string]bool   `json:"-"`

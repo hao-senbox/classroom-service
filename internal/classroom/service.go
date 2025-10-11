@@ -435,70 +435,36 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 		return nil, err
 	}
 
-	classroomMap := make(map[string]*TeacherAssignmentResponse)
+	response := TeacherAssignmentResponse{
+		Teacher:      *teacher,
+		Assignments:  []Assignment{},
+		SeenStudents: make(map[string]bool),
+	}
 
 	for _, a := range assignments {
 
-		if a.TeacherID == nil {
+		if a.TeacherID == nil || *a.TeacherID != teacher.UserID {
 			continue
 		}
 
-		classroomID := a.ClassRoomID.Hex()
-
-		if _, ok := classroomMap[classroomID]; !ok {
-
-			classroomIDParse, err := primitive.ObjectIDFromHex(classroomID)
-			if err != nil {
-				return nil, err
-			}
-
-			classroom, err := s.ClassroomRepository.GetClassroomByID(ctx, classroomIDParse)
-			if err != nil {
-				return nil, err
-			}
-
-			if classroom == nil {
-				return nil, errors.New("classroom not found")
-			}
-
-			clasroomRes := ClassroomResponse{
-				ID:   classroomID,
-				Name: classroom.Name,
-			}
-
-			teacherInfor, err := s.UserService.GetTeacherInfor(ctx, teacher.UserID)
-			if err != nil {
-				return nil, err
-			}
-
-			classroomMap[classroomID] = &TeacherAssignmentResponse{
-				Classroom:   clasroomRes,
-				Teacher:     *teacherInfor,
-				Assignments: []Assignment{},
-			}
+		if a.StudentID == nil {
+			continue
 		}
 
-		if classroomMap[classroomID].SeenStudents == nil {
-			classroomMap[classroomID].SeenStudents = make(map[string]bool)
+		if response.SeenStudents[*a.StudentID] {
+			continue
 		}
 
-		if a.StudentID != nil {
-			if classroomMap[classroomID].SeenStudents[*a.StudentID] {
-				continue
-			}
-			classroomMap[classroomID].SeenStudents[*a.StudentID] = true
-		}
+		response.SeenStudents[*a.StudentID] = true
 
 		var studentInfo user.UserInfor
-		if a.StudentID != nil {
-			st, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
-			if err == nil && st != nil {
-				studentInfo = *st
-			} else {
-				studentInfo = user.UserInfor{
-					UserID:   *a.StudentID,
-					UserName: "Unknown",
-				}
+		st, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
+		if err == nil && st != nil {
+			studentInfo = *st
+		} else {
+			studentInfo = user.UserInfor{
+				UserID:   *a.StudentID,
+				UserName: "Unknown",
 			}
 		}
 
@@ -508,16 +474,11 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 			Student:    studentInfo,
 		}
 
-		classroomMap[classroomID].Assignments = append(classroomMap[classroomID].Assignments, assignmentItem)
+		response.Assignments = append(response.Assignments, assignmentItem)
 	}
 
-	var results []TeacherAssignmentResponse
-	for _, v := range classroomMap {
-		results = append(results, *v)
-	}
-
-	return results, nil
-
+	return []TeacherAssignmentResponse{response}, nil
+	
 }
 
 func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end string, page, limit int) (*ClassroomScheduleResponse, error) {
