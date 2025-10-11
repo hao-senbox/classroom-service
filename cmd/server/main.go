@@ -38,7 +38,7 @@ func main() {
 	} else {
 		log.Println("No .env file found, using environment variables")
 	}
-	log.Printf("🕐 Server started at: %s", time.Now().Format("2006-01-02 15:04:05"))
+
 	cfg := config.LoadConfig()
 
 	logger, err := zap.New(cfg)
