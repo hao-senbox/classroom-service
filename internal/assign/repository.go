@@ -20,6 +20,7 @@ type AssignRepository interface {
 	CountAssignedSlotsTotal(ctx context.Context, classroomID primitive.ObjectID) (int, error)
 	GetAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) ([]*TeacherStudentAssignment, error)
 	GetAssignmentsByStartDateAndEndDate(ctx context.Context, startDate, endDate *time.Time) ([]*TeacherStudentAssignment, error)
+	GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, teacherID string, start, end *time.Time) ([]*TeacherStudentAssignment, error)
 	CountAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, start, end *time.Time) (int, error)
 	// Assignments Template
 	GetAssignmentTemplateBySlot(ctx context.Context, classroomID primitive.ObjectID, slotNumber int) (*ClassRoomTemplateAssignment, error)
@@ -302,4 +303,31 @@ func (r *assignRepository) CheckDuplicateAssignmentTemplate(ctx context.Context,
 func (r *assignRepository) UpdateAssginTemplate(ctx context.Context, id primitive.ObjectID, assign *ClassRoomTemplateAssignment) error {
 	_, err := r.assignTemplateCollection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": assign})
 	return err
+}
+
+func (r assignRepository) GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, teacherID string, start, end *time.Time) ([]*TeacherStudentAssignment, error) {
+
+	filter := bson.M{
+		"class_room_id": classroomID,
+		"teacher_id":    teacherID,
+		"assign_date": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
+	}
+
+	cursor, err := r.assginCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cursor.Close(ctx)
+
+	var results []*TeacherStudentAssignment
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+
 }

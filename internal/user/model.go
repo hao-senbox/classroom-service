@@ -9,9 +9,10 @@ type APIGateWayResponse[T any] struct {
 }
 
 type UserInfor struct {
-	UserID   string `json:"user_id"`
-	UserName string `json:"user_name"`
-	Avartar  Avatar `json:"avatar"`
+	UserID       string          `json:"user_id"`
+	UserName     string          `json:"user_name"`
+	Avartar      Avatar          `json:"avatar"`
+	SeenStudents map[string]bool `json:"-"`
 }
 
 type Avatar struct {

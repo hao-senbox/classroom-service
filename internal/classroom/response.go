@@ -1,9 +1,27 @@
 package classroom
 
 import (
+	"classroom-service/internal/room"
 	"classroom-service/internal/user"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+type ClassroomResponseData struct {
+	ID             primitive.ObjectID  `json:"id" bson:"_id"`
+	RegionID       *primitive.ObjectID `json:"region_id" bson:"region_id"`
+	OrganizationID string              `json:"organization_id" bson:"organization_id"`
+	Name           string              `json:"name" bson:"name"`
+	Description    *string             `json:"description" bson:"description"`
+	Icon           *string             `json:"icon" bson:"icon"`
+	Note           *string             `json:"note" bson:"note"`
+	Room           *room.RoomInfor     `json:"location"`
+	IsActive       bool                `json:"is_active" bson:"is_active"`
+	CreatedBy      string              `json:"created_by" bson:"created_by"`
+	CreatedAt      time.Time           `json:"created_at" bson:"created_at"`
+	UpdatedAt      time.Time           `json:"updated_at" bson:"updated_at"`
+}
 
 type ClassroomTemplateResponse struct {
 	ClassroomID    string                    `json:"classroom_id,omitempty"`
@@ -21,9 +39,9 @@ type SlotAssignmentResponse struct {
 }
 
 type TeacherAssignmentResponse struct {
-	Teacher      user.UserInfor    `json:"teacher"`
-	Assignments  []Assignment      `json:"assignments"`
-	SeenStudents map[string]bool   `json:"-"`
+	Teacher      user.UserInfor  `json:"teacher"`
+	Assignments  []Assignment    `json:"assignments"`
+	SeenStudents map[string]bool `json:"-"`
 }
 
 type ClassroomResponse struct {

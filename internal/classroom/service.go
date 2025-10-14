@@ -4,6 +4,7 @@ import (
 	"classroom-service/internal/assign"
 	"classroom-service/internal/language"
 	"classroom-service/internal/leader"
+	"classroom-service/internal/room"
 	"classroom-service/internal/term"
 	"classroom-service/internal/user"
 	"context"
@@ -20,7 +21,7 @@ import (
 type ClassroomService interface {
 	CreateClassroom(ctx context.Context, req *CreateClassroomRequest, userID string) (string, error)
 	UpdateClassroom(ctx context.Context, req *UpdateClassroomRequest, id string) error
-	GetClassroomsByUserID(ctx context.Context, userID string) ([]string, error)
+	GetClassroomsByUserID(ctx context.Context) ([]*ClassroomResponseData, error)
 	GetClassroomByID(ctx context.Context, id, start, end string, page, limit int) (*ClassroomScheduleResponse, error)
 	//Classroom Template
 	GetClassroomByIDTemplate(ctx context.Context, id string) (*ClassroomTemplateResponse, error)
@@ -28,6 +29,7 @@ type ClassroomService interface {
 
 	//Assignment
 	GetTeacherAssignments(ctx context.Context, userID, organizationID string, termID string) ([]TeacherAssignmentResponse, error)
+	GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID, teacherID, termID string) ([]*user.UserInfor, error)
 }
 
 type classroomService struct {
@@ -37,6 +39,7 @@ type classroomService struct {
 	LeaderRopitory      leader.LeaderRepository
 	LanguageService     language.MessageLanguageGateway
 	TermService         term.TermService
+	RoomService         room.RoomService
 }
 
 func NewClassroomService(classroomRepository ClassroomRepository,
@@ -44,7 +47,8 @@ func NewClassroomService(classroomRepository ClassroomRepository,
 	userService user.UserService,
 	leaderRepository leader.LeaderRepository,
 	languageService language.MessageLanguageGateway,
-	termService term.TermService) ClassroomService {
+	termService term.TermService,
+	roomService room.RoomService) ClassroomService {
 	return &classroomService{
 		ClassroomRepository: classroomRepository,
 		AssignRepository:    assignRepository,
@@ -52,6 +56,7 @@ func NewClassroomService(classroomRepository ClassroomRepository,
 		LeaderRopitory:      leaderRepository,
 		LanguageService:     languageService,
 		TermService:         termService,
+		RoomService:         roomService,
 	}
 }
 
@@ -89,23 +94,35 @@ func (s *classroomService) CreateClassroom(ctx context.Context, req *CreateClass
 		return "", errors.New("user id is required")
 	}
 
+	user, err := s.UserService.GetCurrentUser(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	if user == nil {
+		return "", errors.New("user not found")
+	}
+
+	orgID := user.OrganizationAdmin.ID
+
 	ClassroomID := primitive.NewObjectID()
 
 	data := &ClassRoom{
-		ID:          ClassroomID,
-		Name:        req.Name,
-		Description: req.Description,
-		Note:        req.Note,
-		Icon:        req.Icon,
-		LocationID:  locationID,
-		RegionID:    regionID,
-		CreatedBy:   userID,
-		IsActive:    true,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:             ClassroomID,
+		Name:           req.Name,
+		OrganizationID: orgID,
+		Description:    req.Description,
+		Note:           req.Note,
+		Icon:           req.Icon,
+		LocationID:     locationID,
+		RegionID:       regionID,
+		CreatedBy:      userID,
+		IsActive:       true,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
-	err := s.ClassroomRepository.CreateClassroom(ctx, data)
+	err = s.ClassroomRepository.CreateClassroom(ctx, data)
 	if err != nil {
 		return "", err
 	}
@@ -196,8 +213,65 @@ func (s *classroomService) UpdateClassroom(ctx context.Context, req *UpdateClass
 	return nil
 }
 
-func (s *classroomService) GetClassroomsByUserID(ctx context.Context, userID string) ([]string, error) {
-	return []string{}, nil
+func (s *classroomService) GetClassroomsByUserID(ctx context.Context) ([]*ClassroomResponseData, error) {
+
+	user, err := s.UserService.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if user == nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	orgID := user.OrganizationAdmin.ID
+
+	classrooms, err := s.ClassroomRepository.GetClassroomsByOrgID(ctx, orgID)
+	if err != nil {
+		return nil, err
+
+	}
+
+	data := make([]*ClassroomResponseData, 0)
+
+	for _, classroom := range classrooms {
+		roomData, err := s.RoomService.GetRoomByID(ctx, classroom.LocationID.Hex())
+		if err != nil {
+			log.Println(err)
+		}
+
+		var roomRes *room.RoomInfor
+
+		if roomData == nil {
+			roomRes = &room.RoomInfor{
+				ID:   "",
+				Name: "",
+			}
+		} else {
+			roomRes = &room.RoomInfor{
+				ID:   roomData.ID,
+				Name: roomData.Name,
+			}
+		}
+
+		data = append(data, &ClassroomResponseData{
+			ID:          classroom.ID,
+			Name:        classroom.Name,
+			Icon:        classroom.Icon,
+			Note:        classroom.Note,
+			Room:        roomRes,
+			Description: classroom.Description,
+			RegionID:    classroom.RegionID,
+			IsActive:    classroom.IsActive,
+			CreatedBy:   classroom.CreatedBy,
+			CreatedAt:   classroom.CreatedAt,
+			UpdatedAt:   classroom.UpdatedAt,
+		})
+
+	}
+
+	return data, nil
+
 }
 
 func (s *classroomService) GetClassroomByIDTemplate(ctx context.Context, id string) (*ClassroomTemplateResponse, error) {
@@ -478,7 +552,7 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 	}
 
 	return []TeacherAssignmentResponse{response}, nil
-	
+
 }
 
 func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end string, page, limit int) (*ClassroomScheduleResponse, error) {
@@ -599,7 +673,7 @@ func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end 
 	}
 
 	for _, a := range assignments {
-		
+
 		date := a.AssignDate.Format("2006-01-02")
 
 		if _, ok := scheduleMap[date]; !ok {
@@ -664,5 +738,70 @@ func (s *classroomService) GetClassroomByID(ctx context.Context, id, start, end 
 			Limit:      int64(limit),
 		},
 	}, nil
+
+}
+
+func (s *classroomService) GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID, teacherID, termID string) ([]*user.UserInfor, error) {
+
+	objectID, err := primitive.ObjectIDFromHex(classroomID)
+	if err != nil {
+		return nil, err
+	}
+
+	term, err := s.TermService.GetTermByID(ctx, termID)
+	if err != nil {
+		log.Printf("[ERROR] termService.GetTermByID failed (id=%s): %v", termID, err)
+	}
+
+	if term == nil {
+		return nil, fmt.Errorf("term not found")
+	}
+
+	start, err := time.Parse("2006-01-02", term.StartDate)
+	if err != nil {
+		return nil, err
+	}
+
+	end, err := time.Parse("2006-01-02", term.EndDate)
+	if err != nil {
+		return nil, err
+	}
+
+	assignments, err := s.AssignRepository.GetTeacherAssignmentsByClassroomID(ctx, objectID, teacherID, &start, &end)
+	if err != nil {
+		return nil, err
+	}
+
+	var infor []*user.UserInfor
+	seen := make(map[string]bool)
+
+	for _, a := range assignments {
+
+		studentID := *a.StudentID
+		if seen[studentID] {
+			continue
+		}
+
+		seen[studentID] = true
+
+		var studentInfo *user.UserInfor
+
+		if a.StudentID != nil && *a.StudentID != "" {
+			info, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
+			if err == nil && info != nil {
+				studentInfo = info
+			} else {
+				studentInfo = &user.UserInfor{
+					UserID:   "",
+					UserName: "",
+					Avartar:  user.Avatar{},
+				}
+			}
+		}
+
+		infor = append(infor, studentInfo)
+	}
+
+	return infor, nil
 
 }

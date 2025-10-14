@@ -89,7 +89,7 @@ func main() {
 	assignHandler := assign.NewAssignHandler(assignService)
 
 	classroomRepository := classroom.NewClassroomRepository(classroomCollection)
-	classroomService := classroom.NewClassroomService(classroomRepository, assignRepository, userService, leaderRepository, languageService, termService)
+	classroomService := classroom.NewClassroomService(classroomRepository, assignRepository, userService, leaderRepository, languageService, termService, roomService)
 	classroomHandler := classroom.NewClassroomHandler(classroomService)
 
 	regionRepository := region.NewRegionRepository(regionCollection)
