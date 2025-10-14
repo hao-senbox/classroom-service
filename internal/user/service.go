@@ -169,9 +169,10 @@ func (u *userService) GetStudentInfor(ctx context.Context, studentID string) (*U
 	}
 
 	return &UserInfor{
-		UserID:   fmt.Sprintf("%v", innerData["id"]),
-		UserName: fmt.Sprintf("%v", innerData["name"]),
-		Avartar:  avatar,
+		UserID:         fmt.Sprintf("%v", innerData["id"]),
+		UserName:       fmt.Sprintf("%v", innerData["name"]),
+		OrganizationID: fmt.Sprintf("%v", innerData["organization_id"]),
+		Avartar:        avatar,
 	}, nil
 
 }
