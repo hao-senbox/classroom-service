@@ -62,11 +62,6 @@ func main() {
 	defer consulConn.Deregister()
 
 	// c := cron.New(cron.WithSeconds())
-	// assginCollection := mongoClient.Database(cfg.MongoDB).Collection("assgin")
-	// systemConfig := mongoClient.Database(cfg.MongoDB).Collection("system_config")
-	// notification := mongoClient.Database(cfg.MongoDB).Collection("notification")
-	// classCollection := mongoClient.Database(cfg.MongoDB).Collection("classroom")
-	// leader := mongoClient.Database(cfg.MongoDB).Collection("leader")
 
 	roomService := room.NewRoomService(consulClient)
 	userService := user.NewUserService(consulClient)
