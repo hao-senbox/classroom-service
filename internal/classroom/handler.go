@@ -269,3 +269,36 @@ func (h *ClassroomHandler) GetTeacherAssignmentsByClassroomID(c *gin.Context) {
 	helper.SendSuccess(c, http.StatusOK, "Get teacher assignments successfully", assignments)
 
 }
+
+func (h *ClassroomHandler) GetStudentsByTermAndClassroomID(c *gin.Context) {
+
+	termID := c.Query("term_id")
+	if termID == "" {
+		helper.SendError(c, http.StatusBadRequest, errors.New("term_id is required"), "INVALID_REQUEST")
+		return
+	}
+
+	classroomID := c.Query("classroom_id")
+	if classroomID == "" {
+		helper.SendError(c, http.StatusBadRequest, errors.New("classroom_id is required"), "INVALID_REQUEST")
+		return
+	}
+
+	token, exists := c.Get(constants.Token)
+	if !exists {
+		helper.SendError(c, 400, fmt.Errorf("token not found"), helper.ErrInvalidRequest)
+		return
+	}
+
+	ctx := context.WithValue(c, constants.TokenKey, token)
+
+	students, err := h.ClassroomService.GetStudentsByTermAndClassroomID(ctx, classroomID, termID)
+
+	if err != nil {
+		helper.SendError(c, http.StatusBadRequest, err, "INVALID_REQUEST")
+		return
+	}
+
+	helper.SendSuccess(c, http.StatusOK, "Get students successfully", students)
+	
+}

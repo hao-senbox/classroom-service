@@ -30,6 +30,7 @@ type ClassroomService interface {
 	//Assignment
 	GetTeacherAssignments(ctx context.Context, userID, organizationID string, termID string) ([]TeacherAssignmentResponse, error)
 	GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID, teacherID, termID string) ([]*user.UserInfor, error)
+	GetStudentsByTermAndClassroomID(ctx context.Context, classroomID, termID string) ([]*user.UserInfor, error)
 }
 
 type classroomService struct {
@@ -804,4 +805,68 @@ func (s *classroomService) GetTeacherAssignmentsByClassroomID(ctx context.Contex
 
 	return infor, nil
 
+}
+
+func (s *classroomService) GetStudentsByTermAndClassroomID(ctx context.Context, classroomID, termID string) ([]*user.UserInfor, error) {
+
+	objectID, err := primitive.ObjectIDFromHex(classroomID)
+	if err != nil {
+		return nil, err
+	}
+
+	term, err := s.TermService.GetTermByID(ctx, termID)
+	if err != nil {
+		log.Printf("[ERROR] termService.GetTermByID failed (id=%s): %v", termID, err)
+	}
+
+	if term == nil {
+		return nil, fmt.Errorf("term not found")
+	}
+
+	start, err := time.Parse("2006-01-02", term.StartDate)
+	if err != nil {
+		return nil, err
+	}
+
+	end, err := time.Parse("2006-01-02", term.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	
+	assignments, err := s.AssignRepository.GetAssignmentsByClassroomID(ctx, objectID, &start, &end)
+	if err != nil {
+		return nil, err
+	}
+
+	var infor []*user.UserInfor
+	seen := make(map[string]bool)
+
+	for _, a := range assignments {
+
+		studentID := *a.StudentID
+		if seen[studentID] {
+			continue
+		}
+
+		seen[studentID] = true
+
+		var studentInfo *user.UserInfor
+
+		if a.StudentID != nil && *a.StudentID != "" {
+			info, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
+			if err == nil && info != nil {
+				studentInfo = info
+			} else {
+				studentInfo = &user.UserInfor{
+					UserID:   "",
+					UserName: "",
+					Avartar:  user.Avatar{},
+				}
+			}
+		}
+
+		infor = append(infor, studentInfo)
+	}
+
+	return infor, nil
 }
