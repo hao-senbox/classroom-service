@@ -486,13 +486,15 @@ func (s *classroomService) GetTeacherAssignments(ctx context.Context, userID, or
 		log.Printf("[ERROR] termService.GetTermByID failed (id=%s): %v", termID, err)
 	}
 
+	log.Printf("UserID: %s, OrganizationID: %s, TermID: %s", userID, organizationID, termID)
+
 	teacher, err := s.UserService.GetTeacherInforByOrg(ctx, userID, organizationID)
 	if err != nil {
 		return nil, err
 	}
 
-	if teacher.UserID == "" {
-		return nil, errors.New("teacher not found")
+	if teacher == nil {
+		log.Printf("[ERROR] userService.GetTeacherInforByOrg failed (id=%s): %v", userID, err)
 	}
 
 	startDateParse, err := time.Parse("2006-01-02", term.StartDate)
