@@ -22,6 +22,7 @@ type UpdateClassroomRequest struct {
 
 type CreateAssignmentByTemplateRequest struct {
 	ClassroomID string `json:"classroom_id"`
+	TermID      string `json:"term_id"`
 	StartDate   string `json:"start_date"`
 	EndDate     string `json:"end_date"`
 }

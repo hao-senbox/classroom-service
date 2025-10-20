@@ -21,6 +21,7 @@ type TeacherStudentAssignment struct {
 type ClassRoomTemplateAssignment struct {
 	ID          primitive.ObjectID `json:"id" bson:"_id"`
 	ClassRoomID primitive.ObjectID `json:"class_room_id" bson:"class_room_id"`
+	TermID      primitive.ObjectID `json:"term_id" bson:"term_id"`
 	SlotNumber  int                `json:"slot_number" bson:"slot_number"`
 	TeacherID   *string            `json:"teacher_id" bson:"teacher_id"`
 	StudentID   *string            `json:"student_id" bson:"student_id"`

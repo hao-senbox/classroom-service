@@ -80,3 +80,8 @@ type Pagination struct {
 	Page       int64 `json:"page"`
 	Limit      int64 `json:"limit"`
 }
+
+type ClassroomTemplateByTeacherAndStudent struct {
+	Students []*user.UserInfor `json:"students"`
+	Teachers []*user.UserInfor `json:"teachers"`
+}	

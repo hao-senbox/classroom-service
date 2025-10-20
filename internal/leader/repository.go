@@ -19,7 +19,7 @@ type LeaderRepository interface {
 	// Leader Template
 	CreateLeaderTemplate(ctx context.Context, leader *LeaderTemplate) error
 	DeleteLeaderTemplate(ctx context.Context, classroomID primitive.ObjectID) error
-	GetLeaderTemplateByClassID(ctx context.Context, classroomID primitive.ObjectID) (*LeaderTemplate, error)
+	GetLeaderTemplateByClassID(ctx context.Context, classroomID, termID primitive.ObjectID) (*LeaderTemplate, error)
 }
 
 type leaderRepository struct {
@@ -154,12 +154,13 @@ func (r *leaderRepository) CountLeaderByClassroomID(ctx context.Context, classro
 	}
 
 	return int(count), nil
-	
+
 }
 func (r *leaderRepository) CreateLeaderTemplate(ctx context.Context, leader *LeaderTemplate) error {
 
 	filter := bson.M{
 		"class_room_id": leader.ClassRoomID,
+		"term_id":       leader.TermID,
 	}
 
 	_, err := r.leaderTemplateCollection.DeleteMany(ctx, filter)
@@ -183,10 +184,11 @@ func (r *leaderRepository) DeleteLeaderTemplate(ctx context.Context, classroomID
 
 }
 
-func (r *leaderRepository) GetLeaderTemplateByClassID(ctx context.Context, classroomID primitive.ObjectID) (*LeaderTemplate, error) {
+func (r *leaderRepository) GetLeaderTemplateByClassID(ctx context.Context, classroomID, termID primitive.ObjectID) (*LeaderTemplate, error) {
 
 	filter := bson.M{
 		"class_room_id": classroomID,
+		"term_id":       termID,
 	}
 
 	var leader LeaderTemplate

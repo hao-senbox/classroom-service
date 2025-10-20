@@ -21,16 +21,19 @@ import (
 type ClassroomService interface {
 	CreateClassroom(ctx context.Context, req *CreateClassroomRequest, userID string) (string, error)
 	UpdateClassroom(ctx context.Context, req *UpdateClassroomRequest, id string) error
-	GetClassroomsByUserID(ctx context.Context) ([]*ClassroomResponseData, error)
+	GetClassroomsByOrg(ctx context.Context) ([]*ClassroomResponseData, error)
 	GetClassroomByID(ctx context.Context, id, start, end string, page, limit int) (*ClassroomScheduleResponse, error)
 	//Classroom Template
-	GetClassroomByIDTemplate(ctx context.Context, id string) (*ClassroomTemplateResponse, error)
+	GetClassroomByIDTemplate(ctx context.Context, id, termID string) (*ClassroomTemplateResponse, error)
 	CreateAssignmentByTemplate(ctx context.Context, req *CreateAssignmentByTemplateRequest) error
 
 	//Assignment
 	GetTeacherAssignments(ctx context.Context, userID, organizationID string, termID string) ([]TeacherAssignmentResponse, error)
 	GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID, teacherID, termID string) ([]*user.UserInfor, error)
 	GetStudentsByTermAndClassroomID(ctx context.Context, classroomID, termID string) ([]*user.UserInfor, error)
+
+	//Gateway
+	GetClassroomTemplateByClassroomID(ctx context.Context, classroomID, termID string) (*ClassroomTemplateByTeacherAndStudent, error)
 }
 
 type classroomService struct {
@@ -214,7 +217,7 @@ func (s *classroomService) UpdateClassroom(ctx context.Context, req *UpdateClass
 	return nil
 }
 
-func (s *classroomService) GetClassroomsByUserID(ctx context.Context) ([]*ClassroomResponseData, error) {
+func (s *classroomService) GetClassroomsByOrg(ctx context.Context) ([]*ClassroomResponseData, error) {
 
 	user, err := s.UserService.GetCurrentUser(ctx)
 	if err != nil {
@@ -275,19 +278,24 @@ func (s *classroomService) GetClassroomsByUserID(ctx context.Context) ([]*Classr
 
 }
 
-func (s *classroomService) GetClassroomByIDTemplate(ctx context.Context, id string) (*ClassroomTemplateResponse, error) {
+func (s *classroomService) GetClassroomByIDTemplate(ctx context.Context, id, termID string) (*ClassroomTemplateResponse, error) {
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, err
 	}
 
-	assignTemplate, err := s.AssignRepository.GetAssignmentTemplateByClassroomID(ctx, objectID)
+	objectIDTerm, err := primitive.ObjectIDFromHex(termID)
 	if err != nil {
 		return nil, err
 	}
 
-	leader, err := s.LeaderRopitory.GetLeaderTemplateByClassID(ctx, objectID)
+	assignTemplate, err := s.AssignRepository.GetAssignmentTemplateByClassroomID(ctx, objectID, objectIDTerm)
+	if err != nil {
+		return nil, err
+	}
+
+	leader, err := s.LeaderRopitory.GetLeaderTemplateByClassID(ctx, objectID, objectIDTerm)
 	if err != nil {
 		return nil, err
 	}
@@ -393,6 +401,10 @@ func (s *classroomService) CreateAssignmentByTemplate(ctx context.Context, req *
 		return errors.New("classroom id is required")
 	}
 
+	if req.TermID == "" {
+		return errors.New("term_id is required")
+	}
+
 	if req.StartDate == "" {
 		return errors.New("start_date is required")
 	}
@@ -406,15 +418,21 @@ func (s *classroomService) CreateAssignmentByTemplate(ctx context.Context, req *
 		return err
 	}
 
-	assignTemplate, err := s.AssignRepository.GetAssignmentTemplateByClassroomID(ctx, objectID)
+	objectTermID, err := primitive.ObjectIDFromHex(req.TermID)
 	if err != nil {
 		return err
 	}
 
-	leaderTemplate, err := s.LeaderRopitory.GetLeaderTemplateByClassID(ctx, objectID)
+	assignTemplate, err := s.AssignRepository.GetAssignmentTemplateByClassroomID(ctx, objectID, objectTermID)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("assignTemplate: %v\n", assignTemplate)
+	leaderTemplate, err := s.LeaderRopitory.GetLeaderTemplateByClassID(ctx, objectID, objectTermID)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("leaderTemplate: %v\n", leaderTemplate)
 
 	startParse, err := time.Parse("2006-01-02", req.StartDate)
 	if err != nil {
@@ -834,7 +852,7 @@ func (s *classroomService) GetStudentsByTermAndClassroomID(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	assignments, err := s.AssignRepository.GetAssignmentsByClassroomID(ctx, objectID, &start, &end)
 	if err != nil {
 		return nil, err
@@ -871,4 +889,53 @@ func (s *classroomService) GetStudentsByTermAndClassroomID(ctx context.Context, 
 	}
 
 	return infor, nil
+}
+
+func (s *classroomService) GetClassroomTemplateByClassroomID(ctx context.Context, classroomID, termID string) (*ClassroomTemplateByTeacherAndStudent, error) {
+
+	objectID, err := primitive.ObjectIDFromHex(classroomID)
+	if err != nil {
+		return nil, err
+	}
+
+	objectIDTerm, err := primitive.ObjectIDFromHex(termID)
+	if err != nil {
+		return nil, err
+	}
+
+	assignTemplate, err := s.AssignRepository.GetAssignmentTemplateByClassroomID(ctx, objectID, objectIDTerm)
+	if err != nil {
+		return nil, err
+	}
+
+	if assignTemplate == nil {
+		log.Printf("ClassroomTemplateByTeacherAndStudent not found for classroomID=%s", classroomID)
+		return &ClassroomTemplateByTeacherAndStudent{
+			Teachers: []*user.UserInfor{},
+			Students: []*user.UserInfor{},
+		}, nil
+	}
+
+	var studentArr []*user.UserInfor
+	var teacherArr []*user.UserInfor
+
+	for _, a := range assignTemplate {
+		if a.StudentID != nil && *a.StudentID != "" {
+			info, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
+			if err == nil && info != nil {
+				studentArr = append(studentArr, info)
+			}
+		}
+		if a.TeacherID != nil && *a.TeacherID != "" {
+			info, err := s.UserService.GetTeacherInfor(ctx, *a.TeacherID)
+			if err == nil && info != nil {
+				teacherArr = append(teacherArr, info)
+			}
+		}
+	}
+
+	return &ClassroomTemplateByTeacherAndStudent{
+		Teachers: teacherArr,
+		Students: studentArr,
+	}, nil
 }

@@ -153,7 +153,12 @@ func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *U
 		return err
 	}
 
-	existingAssignment, err := s.AssignRepository.GetAssignmentTemplateBySlot(ctx, classroomObjID, request.SlotNumber)
+	termObjID, err := primitive.ObjectIDFromHex(request.TermID)
+	if err != nil {
+		return err
+	}
+
+	existingAssignment, err := s.AssignRepository.GetAssignmentTemplateBySlot(ctx, classroomObjID, termObjID, request.SlotNumber)
 	if err != nil {
 		return err
 	}
@@ -162,6 +167,7 @@ func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *U
 		newAssignment := &ClassRoomTemplateAssignment{
 			ID:          primitive.NewObjectID(),
 			ClassRoomID: classroomObjID,
+			TermID:      termObjID,
 			SlotNumber:  request.SlotNumber,
 			TeacherID:   request.TeacherID,
 			StudentID:   request.StudentID,
@@ -177,6 +183,7 @@ func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *U
 				exists, err := s.AssignRepository.CheckDuplicateAssignmentTemplate(
 					ctx,
 					classroomObjID,
+					termObjID,
 					*existingAssignment.StudentID,
 					*request.TeacherID,
 				)
@@ -195,6 +202,7 @@ func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *U
 				exists, err := s.AssignRepository.CheckDuplicateAssignmentTemplate(
 					ctx,
 					classroomObjID,
+					termObjID,
 					*request.StudentID,
 					*existingAssignment.TeacherID,
 				)
@@ -224,7 +232,12 @@ func (s *assignService) DeleteAssignmentTemplate(ctx context.Context, request *U
 		return err
 	}
 
-	assign, err := s.AssignRepository.GetAssignmentTemplateBySlot(ctx, classroomObjID, request.SlotNumber)
+	termObjID, err := primitive.ObjectIDFromHex(request.TermID)
+	if err != nil {
+		return err
+	}
+
+	assign, err := s.AssignRepository.GetAssignmentTemplateBySlot(ctx, classroomObjID, termObjID, request.SlotNumber)
 	if err != nil {
 		return err
 	}

@@ -23,8 +23,9 @@ func RegisterRoutes(r *gin.Engine, handler *ClassroomHandler) {
 	}
 	apiGatewayClassroomGroup := r.Group("/api/v1/gateway", middleware.Secured())
 	{
-		apiGatewayClassroomGroup.GET("/classrooms", handler.GetClassroomsByUserID)
+		apiGatewayClassroomGroup.GET("/classrooms", handler.GetClassroomsByOrg)
 		apiGatewayClassroomGroup.GET("/classrooms/teacher-assignments", handler.GetTeacherAssignmentsByClassroomID)
 		apiGatewayClassroomGroup.GET(("/classrooms/term"), handler.GetStudentsByTermAndClassroomID)
+		apiGatewayClassroomGroup.GET("classrooms/template", handler.GetClassroomTemplateByClassroomID)
 	}
 }

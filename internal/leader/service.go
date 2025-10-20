@@ -100,10 +100,16 @@ func (s *leaderService) CreateLeaderTemplate(c *gin.Context, req *CreateLeaderRe
 		return err
 	}
 
+	objTermID, err := primitive.ObjectIDFromHex(req.TermID)
+	if err != nil {
+		return err
+	}
+
 	data := &LeaderTemplate{
 		ID:          primitive.NewObjectID(),
 		Owner:       &req.Owner,
 		ClassRoomID: objClassroomID,
+		TermID:      objTermID,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
