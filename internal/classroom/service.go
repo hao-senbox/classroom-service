@@ -986,10 +986,13 @@ func (s *classroomService) GetClassroomTemplateByTermID(ctx context.Context, ter
 
 		}
 
-		classMap[classID].AssignTemplates = append(classMap[classID].AssignTemplates, &AssignTemplate{
-			TeacherID: a.TeacherID,
-			StudentID: a.StudentID,
-		})
+		if a.TeacherID != nil && *a.TeacherID != "" && a.StudentID != nil && *a.StudentID != "" {
+			classMap[classID].AssignTemplates = append(classMap[classID].AssignTemplates, &AssignTemplate{
+				TeacherID: a.TeacherID,
+				StudentID: a.StudentID,
+			})
+		}
+
 	}
 
 	var classArr []*ClassroomTemplateGatewayResponse
@@ -1036,10 +1039,12 @@ func (s *classroomService) GetClassroomTemplateByTermIDAndClassroomID(ctx contex
 	}
 
 	for _, a := range assignTemplate {
-		data.AssignTemplates = append(data.AssignTemplates, &AssignTemplate{
-			TeacherID: a.TeacherID,
-			StudentID: a.StudentID,
-		})
+		if a.StudentID != nil && *a.StudentID != "" && a.TeacherID != nil && *a.TeacherID != "" {
+			data.AssignTemplates = append(data.AssignTemplates, &AssignTemplate{
+				TeacherID: a.TeacherID,
+				StudentID: a.StudentID,
+			})
+		}
 	}
 
 	return data, nil
