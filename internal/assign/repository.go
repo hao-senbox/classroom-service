@@ -25,6 +25,7 @@ type AssignRepository interface {
 	// Assignments Template
 	GetAssignmentTemplateBySlot(ctx context.Context, classroomID, termID primitive.ObjectID, slotNumber int) (*ClassRoomTemplateAssignment, error)
 	GetAssignmentTemplateByClassroomID(ctx context.Context, classroomID , termID primitive.ObjectID) ([]*ClassRoomTemplateAssignment, error)
+	GetAssignmentTemplateByTermID(ctx context.Context, termID primitive.ObjectID) ([]*ClassRoomTemplateAssignment, error)
 	CreateAssignmentTemplate(ctx context.Context, assign *ClassRoomTemplateAssignment) error
 	CheckDuplicateAssignmentTemplate(ctx context.Context, classroomID, termID primitive.ObjectID, studentID, teacherID string) (bool, error)
 	UpdateAssginTemplate(ctx context.Context, id primitive.ObjectID, assign *ClassRoomTemplateAssignment) error
@@ -313,7 +314,7 @@ func (r *assignRepository) UpdateAssginTemplate(ctx context.Context, id primitiv
 	return err
 }
 
-func (r assignRepository) GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, teacherID string, start, end *time.Time) ([]*TeacherStudentAssignment, error) {
+func (r *assignRepository) GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID primitive.ObjectID, teacherID string, start, end *time.Time) ([]*TeacherStudentAssignment, error) {
 
 	filter := bson.M{
 		"class_room_id": classroomID,
@@ -338,4 +339,26 @@ func (r assignRepository) GetTeacherAssignmentsByClassroomID(ctx context.Context
 
 	return results, nil
 
+}
+
+func (r *assignRepository) GetAssignmentTemplateByTermID(ctx context.Context, termID primitive.ObjectID) ([]*ClassRoomTemplateAssignment, error) {
+
+	filter := bson.M{
+		"term_id": termID,
+	}
+
+	cursor, err := r.assignTemplateCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	defer cursor.Close(ctx)
+
+	var results []*ClassRoomTemplateAssignment
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+	
 }

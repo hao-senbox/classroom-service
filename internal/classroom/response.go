@@ -84,4 +84,16 @@ type Pagination struct {
 type ClassroomTemplateByTeacherAndStudent struct {
 	Students []*user.UserInfor `json:"students"`
 	Teachers []*user.UserInfor `json:"teachers"`
-}	
+}
+
+type ClassroomTemplateGatewayResponse struct {
+	ClassID string `json:"class_id"`
+	ClassName string `json:"class_name"`
+	ClassIcon string `json:"class_icon"`
+	AssignTemplates []*AssignTemplate `json:"assign_templates"`
+}
+
+type AssignTemplate struct {
+	StudentID *string `json:"student_id"`
+	TeacherID *string `json:"teacher_id"`
+}

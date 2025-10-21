@@ -19,13 +19,14 @@ func RegisterRoutes(r *gin.Engine, handler *ClassroomHandler) {
 
 		// Classroom Assignment
 		classroomGroup.GET("/teacher-assignments", handler.GetTeacherAssignments)
-
 	}
 	apiGatewayClassroomGroup := r.Group("/api/v1/gateway", middleware.Secured())
 	{
 		apiGatewayClassroomGroup.GET("/classrooms", handler.GetClassroomsByOrg)
 		apiGatewayClassroomGroup.GET("/classrooms/teacher-assignments", handler.GetTeacherAssignmentsByClassroomID)
 		apiGatewayClassroomGroup.GET(("/classrooms/term"), handler.GetStudentsByTermAndClassroomID)
-		apiGatewayClassroomGroup.GET("/classrooms/template", handler.GetClassroomTemplateByClassroomID)
+		apiGatewayClassroomGroup.GET("/classrooms/template/students-teachers", handler.GetStudentsAndTeachersClassroomTemplateByClassroomID)
+		apiGatewayClassroomGroup.GET("/classrooms/template/term", handler.GetClassroomTemplateByTermID)
+		apiGatewayClassroomGroup.GET("/classrooms/template/term-classroom", handler.GetClassroomTemplateByTermIDAndClassroomID)
 	}
 }
