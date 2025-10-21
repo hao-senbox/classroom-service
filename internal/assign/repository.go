@@ -235,15 +235,13 @@ func (r *assignRepository) GetAssignmentTemplateByClassroomID(ctx context.Contex
 		"term_id": termID,
 	}
 
-	fmt.Printf("filter: %v\n", filter)
-
 	cursor, err := r.assignTemplateCollection.Find(ctx, filter)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		}
 		return nil, err
-	}
+	}	
 
 	defer cursor.Close(ctx)
 

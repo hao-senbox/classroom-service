@@ -427,12 +427,11 @@ func (s *classroomService) CreateAssignmentByTemplate(ctx context.Context, req *
 	if err != nil {
 		return err
 	}
-	fmt.Printf("assignTemplate: %v\n", assignTemplate)
+
 	leaderTemplate, err := s.LeaderRopitory.GetLeaderTemplateByClassID(ctx, objectID, objectTermID)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("leaderTemplate: %v\n", leaderTemplate)
 
 	startParse, err := time.Parse("2006-01-02", req.StartDate)
 	if err != nil {
@@ -919,19 +918,31 @@ func (s *classroomService) GetClassroomTemplateByClassroomID(ctx context.Context
 	var studentArr []*user.UserInfor
 	var teacherArr []*user.UserInfor
 
+	studentSeen := make(map[string]bool)
+	teacherSeen := make(map[string]bool)
+
 	for _, a := range assignTemplate {
-		if a.StudentID != nil && *a.StudentID != "" {
-			info, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
-			if err == nil && info != nil {
-				studentArr = append(studentArr, info)
+
+		if a.StudentID != nil && *a.StudentID != "" && a.TeacherID != nil && *a.TeacherID != "" {
+			if !studentSeen[*a.StudentID] {
+				info, err := s.UserService.GetStudentInfor(ctx, *a.StudentID)
+				if err == nil && info != nil {
+					studentArr = append(studentArr, info)
+					studentSeen[*a.StudentID] = true
+				}
 			}
 		}
-		if a.TeacherID != nil && *a.TeacherID != "" {
-			info, err := s.UserService.GetTeacherInfor(ctx, *a.TeacherID)
-			if err == nil && info != nil {
-				teacherArr = append(teacherArr, info)
+
+		if a.TeacherID != nil && *a.TeacherID != "" && a.StudentID != nil && *a.StudentID != "" {
+			if !teacherSeen[*a.TeacherID] {
+				info, err := s.UserService.GetTeacherInfor(ctx, *a.TeacherID)
+				if err == nil && info != nil {
+					teacherArr = append(teacherArr, info)
+					teacherSeen[*a.TeacherID] = true
+				}
 			}
 		}
+		
 	}
 
 	return &ClassroomTemplateByTeacherAndStudent{
