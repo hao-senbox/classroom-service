@@ -79,7 +79,7 @@ func main() {
 	leaderService := leader.NewLeaderService(leaderRepository)
 	leaderHandler := leader.NewLeaderHandler(leaderService)
 
-	assignRepository := assign.NewAssignRepository(assignCollection, assignTemplateCollection)
+	assignRepository := assign.NewAssignRepository(assignCollection, assignTemplateCollection, classroomCollection)
 	assignService := assign.NewAssignService(assignRepository)
 	assignHandler := assign.NewAssignHandler(assignService)
 

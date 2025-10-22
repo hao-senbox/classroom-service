@@ -29,17 +29,20 @@ type AssignRepository interface {
 	CreateAssignmentTemplate(ctx context.Context, assign *ClassRoomTemplateAssignment) error
 	CheckDuplicateAssignmentTemplate(ctx context.Context, classroomID, termID primitive.ObjectID, studentID, teacherID string) (bool, error)
 	UpdateAssginTemplate(ctx context.Context, id primitive.ObjectID, assign *ClassRoomTemplateAssignment) error
+	CheckStudentInRegionTerm(ctx context.Context, classroomID primitive.ObjectID, termID primitive.ObjectID, studentID string) (bool, error)
 }
 
 type assignRepository struct {
 	assginCollection         *mongo.Collection
 	assignTemplateCollection *mongo.Collection
+	classroomCollection      *mongo.Collection
 }
 
-func NewAssignRepository(assginCollection, assignTemplateCollection *mongo.Collection) AssignRepository {
+func NewAssignRepository(assginCollection, assignTemplateCollection, classroomCollection *mongo.Collection) AssignRepository {
 	return &assignRepository{
 		assginCollection:         assginCollection,
 		assignTemplateCollection: assignTemplateCollection,
+		classroomCollection:      classroomCollection,
 	}
 }
 
@@ -361,4 +364,48 @@ func (r *assignRepository) GetAssignmentTemplateByTermID(ctx context.Context, te
 
 	return results, nil
 	
+}
+
+func (r *assignRepository) CheckStudentInRegionTerm(ctx context.Context, classroomID primitive.ObjectID, termID primitive.ObjectID, studentID string) (bool, error) {
+
+	var classroom struct {
+		ID       primitive.ObjectID `bson:"_id"`
+		RegionID primitive.ObjectID `bson:"region_id"`
+	}
+
+	if err := r.classroomCollection.FindOne(ctx, bson.M{"_id": classroomID}).Decode(&classroom); err != nil {
+		return false, err
+	}
+
+
+	cursor, err := r.classroomCollection.Find(ctx, bson.M{
+		"region_id": classroom.RegionID,
+	})
+	if err != nil {
+		return false, err
+	}
+	defer cursor.Close(ctx)
+
+	var classroomIDs []primitive.ObjectID
+	for cursor.Next(ctx) {
+		var c struct{ ID primitive.ObjectID `bson:"_id"` }
+		if err := cursor.Decode(&c); err != nil {
+			return false, err
+		}
+		classroomIDs = append(classroomIDs, c.ID)
+	}
+
+	filter := bson.M{
+		"class_room_id": bson.M{"$in": classroomIDs},
+		"term_id":       termID,
+		"student_id":    studentID,
+	}
+
+	count, err := r.assignTemplateCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+
 }

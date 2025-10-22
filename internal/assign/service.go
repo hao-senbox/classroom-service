@@ -198,6 +198,14 @@ func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *U
 		}
 
 		if request.StudentID != nil {
+			exists, err := s.AssignRepository.CheckStudentInRegionTerm(ctx, classroomObjID, termObjID, *request.StudentID)
+			if err != nil {
+				return err
+			}
+			if exists {
+				return errors.New("student already assigned to another class in this region for the same term")
+			}
+
 			if existingAssignment.TeacherID != nil {
 				exists, err := s.AssignRepository.CheckDuplicateAssignmentTemplate(
 					ctx,
