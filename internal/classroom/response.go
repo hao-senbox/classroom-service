@@ -87,13 +87,24 @@ type ClassroomTemplateByTeacherAndStudent struct {
 }
 
 type ClassroomTemplateGatewayResponse struct {
-	ClassID string `json:"class_id"`
-	ClassName string `json:"class_name"`
-	ClassIcon string `json:"class_icon"`
+	ClassID         string            `json:"class_id"`
+	ClassName       string            `json:"class_name"`
+	ClassIcon       string            `json:"class_icon"`
 	AssignTemplates []*AssignTemplate `json:"assign_templates"`
 }
 
 type AssignTemplate struct {
 	StudentID *string `json:"student_id"`
 	TeacherID *string `json:"teacher_id"`
+}
+
+type ClassroomTemplateByTermIDAndStudentIDResponse struct {
+	ClassRoom *ClassRoomTemplateResponse `json:"class_room"`
+	Leader    *user.UserInfor            `json:"leader"`
+	Student   *user.UserInfor            `json:"student"`
+}
+
+type ClassRoomTemplateResponse struct {
+	ClassID   string `json:"class_id"`
+	ClassName string `json:"class_name"`
 }

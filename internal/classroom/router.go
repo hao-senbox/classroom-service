@@ -16,6 +16,7 @@ func RegisterRoutes(r *gin.Engine, handler *ClassroomHandler) {
 		// Classroom Template
 		classroomGroup.GET("/template/:classroom_id", handler.GetClassroomByIDTemplate)
 		classroomGroup.POST("/template", handler.CreateAssignmentByTemplate)
+		classroomGroup.GET("/template/term-student", handler.GetClassroomTemplateByTermIDAndStudentID)
 
 		// Classroom Assignment
 		classroomGroup.GET("/teacher-assignments", handler.GetTeacherAssignments)

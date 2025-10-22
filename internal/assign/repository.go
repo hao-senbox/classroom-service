@@ -26,6 +26,7 @@ type AssignRepository interface {
 	GetAssignmentTemplateBySlot(ctx context.Context, classroomID, termID primitive.ObjectID, slotNumber int) (*ClassRoomTemplateAssignment, error)
 	GetAssignmentTemplateByClassroomID(ctx context.Context, classroomID , termID primitive.ObjectID) ([]*ClassRoomTemplateAssignment, error)
 	GetAssignmentTemplateByTermID(ctx context.Context, termID primitive.ObjectID) ([]*ClassRoomTemplateAssignment, error)
+	GetAssignmentTemplateByTermIDAndStudentID(ctx context.Context, studentID string, termID primitive.ObjectID) (*ClassRoomTemplateAssignment, error)
 	CreateAssignmentTemplate(ctx context.Context, assign *ClassRoomTemplateAssignment) error
 	CheckDuplicateAssignmentTemplate(ctx context.Context, classroomID, termID primitive.ObjectID, studentID, teacherID string) (bool, error)
 	UpdateAssginTemplate(ctx context.Context, id primitive.ObjectID, assign *ClassRoomTemplateAssignment) error
@@ -407,5 +408,24 @@ func (r *assignRepository) CheckStudentInRegionTerm(ctx context.Context, classro
 	}
 
 	return count > 0, nil
+
+}
+
+func (r *assignRepository) GetAssignmentTemplateByTermIDAndStudentID(ctx context.Context, studentID string, termID primitive.ObjectID) (*ClassRoomTemplateAssignment, error) {
+
+	filter := bson.M{
+		"student_id": studentID,
+		"term_id":    termID,
+	}
+
+	var result ClassRoomTemplateAssignment
+	if err := r.assignTemplateCollection.FindOne(ctx, filter).Decode(&result); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &result, nil
 
 }
