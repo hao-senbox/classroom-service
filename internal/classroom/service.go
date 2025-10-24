@@ -31,6 +31,7 @@ type ClassroomService interface {
 	GetTeacherAssignments(ctx context.Context, userID, organizationID string, termID string) ([]TeacherAssignmentResponse, error)
 	GetTeacherAssignmentsByClassroomID(ctx context.Context, classroomID, teacherID, termID string) ([]*user.UserInfor, error)
 	GetStudentsByTermAndClassroomID(ctx context.Context, classroomID, termID string) ([]*user.UserInfor, error)
+	GetTeacherTemplateByTermIDAndStudentID(ctx context.Context, studentID, termID string) ([]*user.UserInfor, error)
 
 	//Gateway
 	GetStudentsAndTeachersClassroomTemplateByClassroomID(ctx context.Context, classroomID, termID string) (*ClassroomTemplateByTeacherAndStudent, error)
@@ -1053,6 +1054,98 @@ func (s *classroomService) GetClassroomTemplateByTermIDAndClassroomID(ctx contex
 
 func (s *classroomService) GetClassroomTemplateByTermIDAndStudentID(ctx context.Context, studentID, termID string) (*ClassroomTemplateByTermIDAndStudentIDResponse, error) {
 
+	// objectIDTerm, err := primitive.ObjectIDFromHex(termID)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// assignTemplate, err := s.AssignRepository.GetAssignmentTemplateByTermIDAndStudentID(ctx, studentID, objectIDTerm)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// if assignTemplate == nil {
+	// 	log.Printf("ClassroomTemplateByTeacherAndStudent not found for classroomID=%s", termID)
+	// 	return nil, nil
+	// }
+
+	// classroom, err := s.ClassroomRepository.GetClassroomByID(ctx, assignTemplate.ClassRoomID)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// var classroomData ClassRoomTemplateResponse
+	// var leaderData *user.UserInfor
+	// var studentData *user.UserInfor
+
+	// if classroom == nil {
+	// 	classroomData = ClassRoomTemplateResponse{
+	// 		ClassID:   "",
+	// 		ClassName: "",
+	// 	}
+	// } else {
+	// 	classroomData = ClassRoomTemplateResponse{
+	// 		ClassID:   classroom.ID.Hex(),
+	// 		ClassName: classroom.Name,
+	// 	}
+	// }
+
+	// if assignTemplate.StudentID != nil {
+
+	// 	student, err := s.UserService.GetStudentInfor(ctx, *assignTemplate.StudentID)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	if student == nil {
+	// 		log.Printf("Student not found for student_id=%s", *assignTemplate.StudentID)
+	// 		studentData = &user.UserInfor{
+	// 			UserID:   "",
+	// 			UserName: "",
+	// 		}
+	// 	} else {
+	// 		studentData = student
+	// 	}
+	// }
+
+	// leader, err := s.LeaderRopitory.GetLeaderTemplateByClassID(ctx, assignTemplate.ClassRoomID, objectIDTerm)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// if leader != nil && leader.Owner != nil {
+	// 	switch leader.Owner.OwnerRole {
+	// 	case "teacher":
+	// 		leaderData, err = s.UserService.GetTeacherInfor(ctx, leader.Owner.OwnerID)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 	case "student":
+	// 		leaderData, err = s.UserService.GetStudentInfor(ctx, leader.Owner.OwnerID)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 	case "staff":
+	// 		leaderData, err = s.UserService.GetStaffInfor(ctx, leader.Owner.OwnerID)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 	}
+		
+	// }
+
+	// return &ClassroomTemplateByTermIDAndStudentIDResponse{
+	// 	ClassRoom: &classroomData,
+	// 	Leader:    leaderData,
+	// 	Student:   studentData,
+	// }, nil
+
+	return nil, nil
+	
+}
+
+func (s *classroomService) GetTeacherTemplateByTermIDAndStudentID(ctx context.Context, studentID, termID string) ([]*user.UserInfor, error) {
+
 	objectIDTerm, err := primitive.ObjectIDFromHex(termID)
 	if err != nil {
 		return nil, err
@@ -1068,75 +1161,20 @@ func (s *classroomService) GetClassroomTemplateByTermIDAndStudentID(ctx context.
 		return nil, nil
 	}
 
-	classroom, err := s.ClassroomRepository.GetClassroomByID(ctx, assignTemplate.ClassRoomID)
-	if err != nil {
-		return nil, err
-	}
-
-	var classroomData ClassRoomTemplateResponse
-	var leaderData *user.UserInfor
-	var studentData *user.UserInfor
-
-	if classroom == nil {
-		classroomData = ClassRoomTemplateResponse{
-			ClassID:   "",
-			ClassName: "",
-		}
-	} else {
-		classroomData = ClassRoomTemplateResponse{
-			ClassID:   classroom.ID.Hex(),
-			ClassName: classroom.Name,
-		}
-	}
-
-	if assignTemplate.StudentID != nil {
-
-		student, err := s.UserService.GetStudentInfor(ctx, *assignTemplate.StudentID)
-		if err != nil {
-			return nil, err
-		}
-
-		if student == nil {
-			log.Printf("Student not found for student_id=%s", *assignTemplate.StudentID)
-			studentData = &user.UserInfor{
-				UserID:   "",
-				UserName: "",
-			}
-		} else {
-			studentData = student
-		}
-	}
-
-	leader, err := s.LeaderRopitory.GetLeaderTemplateByClassID(ctx, assignTemplate.ClassRoomID, objectIDTerm)
-	if err != nil {
-		return nil, err
-	}
-
-	if leader != nil && leader.Owner != nil {
-		switch leader.Owner.OwnerRole {
-		case "teacher":
-			leaderData, err = s.UserService.GetTeacherInfor(ctx, leader.Owner.OwnerID)
+	var teacherArr []*user.UserInfor
+	for _, a := range assignTemplate {
+		if a.TeacherID != nil && *a.TeacherID != "" {
+			teacher, err := s.UserService.GetTeacherInfor(ctx, *a.TeacherID)
 			if err != nil {
-				return nil, err
+				log.Printf("Cannot fetch teacher info for teacher_id=%s: %v", *a.TeacherID, err)
+				continue
 			}
-		case "student":
-			leaderData, err = s.UserService.GetStudentInfor(ctx, leader.Owner.OwnerID)
-			if err != nil {
-				return nil, err
-			}
-		case "staff":
-			leaderData, err = s.UserService.GetStaffInfor(ctx, leader.Owner.OwnerID)
-			if err != nil {
-				return nil, err
+			if teacher != nil {
+				teacherArr = append(teacherArr, teacher)
 			}
 		}
-		
 	}
 
-	return &ClassroomTemplateByTermIDAndStudentIDResponse{
-		ClassRoom: &classroomData,
-		Leader:    leaderData,
-		Student:   studentData,
-	}, nil
-	
+	return teacherArr, nil
+
 }
