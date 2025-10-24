@@ -14,6 +14,7 @@ import (
 type AssignRepository interface {
 	CreateAssignment(ctx context.Context, assign *TeacherStudentAssignment) error
 	CheckDuplicateAssignmentForDate(ctx context.Context, classroomID primitive.ObjectID, date time.Time, studentID, teacherID string) (bool, error)
+	CheckDuplicateAssignmentStudent(ctx context.Context, date time.Time, studentID string) (bool, error)
 	GetAssignmentBySlotAndDate(ctx context.Context, classroomID primitive.ObjectID, slotNumber int, date *time.Time) (*TeacherStudentAssignment, error)
 	UpdateAssgin(ctx context.Context, id primitive.ObjectID, assign *TeacherStudentAssignment) error
 	GetAssignmentsByClassroomAndDate(ctx context.Context, classroomID primitive.ObjectID, date *time.Time) ([]*TeacherStudentAssignment, error)
@@ -30,7 +31,7 @@ type AssignRepository interface {
 	CreateAssignmentTemplate(ctx context.Context, assign *ClassRoomTemplateAssignment) error
 	CheckDuplicateAssignmentTemplate(ctx context.Context, classroomID, termID primitive.ObjectID, studentID, teacherID string) (bool, error)
 	UpdateAssginTemplate(ctx context.Context, id primitive.ObjectID, assign *ClassRoomTemplateAssignment) error
-	CheckStudentInRegionTerm(ctx context.Context, classroomID primitive.ObjectID, termID primitive.ObjectID, studentID string) (bool, error)
+	CheckStudentExistingInTerm(ctx context.Context, termID primitive.ObjectID, studentID string) (bool, error)
 }
 
 type assignRepository struct {
@@ -118,6 +119,28 @@ func (r *assignRepository) CheckDuplicateAssignmentForDate(ctx context.Context, 
 
 	return count > 0, nil
 
+}
+
+func (r *assignRepository) CheckDuplicateAssignmentStudent(ctx context.Context, date time.Time, studentID string) (bool, error) {
+
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	end := start.Add(24 * time.Hour)
+
+	filter := bson.M{
+		"student_id": studentID,
+		"assign_date": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
+	}
+
+	count, err := r.assginCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+	
 }
 
 func (r *assignRepository) UpdateAssgin(ctx context.Context, id primitive.ObjectID, assign *TeacherStudentAssignment) error {
@@ -367,39 +390,11 @@ func (r *assignRepository) GetAssignmentTemplateByTermID(ctx context.Context, te
 	
 }
 
-func (r *assignRepository) CheckStudentInRegionTerm(ctx context.Context, classroomID primitive.ObjectID, termID primitive.ObjectID, studentID string) (bool, error) {
-
-	var classroom struct {
-		ID       primitive.ObjectID `bson:"_id"`
-		RegionID primitive.ObjectID `bson:"region_id"`
-	}
-
-	if err := r.classroomCollection.FindOne(ctx, bson.M{"_id": classroomID}).Decode(&classroom); err != nil {
-		return false, err
-	}
-
-
-	cursor, err := r.classroomCollection.Find(ctx, bson.M{
-		"region_id": classroom.RegionID,
-	})
-	if err != nil {
-		return false, err
-	}
-	defer cursor.Close(ctx)
-
-	var classroomIDs []primitive.ObjectID
-	for cursor.Next(ctx) {
-		var c struct{ ID primitive.ObjectID `bson:"_id"` }
-		if err := cursor.Decode(&c); err != nil {
-			return false, err
-		}
-		classroomIDs = append(classroomIDs, c.ID)
-	}
-
+func (r *assignRepository) CheckStudentExistingInTerm(ctx context.Context, termID primitive.ObjectID, studentID string) (bool, error) {
+	
 	filter := bson.M{
-		"class_room_id": bson.M{"$in": classroomIDs},
-		"term_id":       termID,
-		"student_id":    studentID,
+		"student_id": studentID,
+		"term_id":    termID,
 	}
 
 	count, err := r.assignTemplateCollection.CountDocuments(ctx, filter)
@@ -407,7 +402,11 @@ func (r *assignRepository) CheckStudentInRegionTerm(ctx context.Context, classro
 		return false, err
 	}
 
-	return count > 0, nil
+	if count > 0 {
+		return true, nil
+	}
+
+	return false, nil
 
 }
 

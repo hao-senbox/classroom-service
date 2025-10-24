@@ -47,6 +47,15 @@ func (s *assignService) AssignSlot(ctx context.Context, request *UpdateAssginReq
 	}
 
 	if existingAssignment == nil {
+		if request.StudentID != nil {
+			check, err := s.AssignRepository.CheckDuplicateAssignmentStudent(ctx, dateParse, *request.StudentID)
+			if err != nil {
+				return err
+			}
+			if check {
+				return errors.New("student already assigned to another class in")
+			}
+		}
 		newAssignment := &TeacherStudentAssignment{
 			ID:             primitive.NewObjectID(),
 			ClassRoomID:    classroomObjID,
@@ -165,7 +174,7 @@ func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *U
 
 	if existingAssignment == nil {
 		if request.StudentID != nil {
-			exists, err := s.AssignRepository.CheckStudentInRegionTerm(ctx, classroomObjID, termObjID, *request.StudentID)
+			exists, err := s.AssignRepository.CheckStudentExistingInTerm(ctx, termObjID, *request.StudentID)
 			if err != nil {
 				return err
 			}
@@ -207,7 +216,7 @@ func (s *assignService) CreateAssignmentTemplate(ctx context.Context, request *U
 		}
 
 		if request.StudentID != nil {
-			exists, err := s.AssignRepository.CheckStudentInRegionTerm(ctx, classroomObjID, termObjID, *request.StudentID)
+			exists, err := s.AssignRepository.CheckStudentExistingInTerm(ctx, termObjID, *request.StudentID)
 			if err != nil {
 				return err
 			}
