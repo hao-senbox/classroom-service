@@ -978,10 +978,54 @@ func (s *classroomService) GetClassroomTemplateByTermID(ctx context.Context, ter
 				continue
 			}
 
+			var leader *user.UserInfor
+			leaderData, err := s.LeaderRopitory.GetLeaderTemplateByClassID(ctx, a.ClassRoomID, objectIDTerm)
+			if err != nil {
+				log.Printf("Cannot fetch leader info for class_room_id=%s: %v", classID, err)
+				continue
+			}
+
+			if leaderData != nil {
+				if leaderData.Owner.OwnerRole == "teacher" {
+					leaderRes, err := s.UserService.GetTeacherInfor(ctx, leaderData.Owner.OwnerID)
+					if err != nil {
+						log.Printf("Cannot fetch leader info for class_room_id=%s: %v", classID, err)
+						continue
+					}
+					if leaderRes == nil {
+						leader = nil
+					} else {
+						leader = leaderRes
+					}
+				} else if leaderData.Owner.OwnerRole == "student" {
+					leaderRes, err := s.UserService.GetStudentInfor(ctx, leaderData.Owner.OwnerID)
+					if err != nil {
+						log.Printf("Cannot fetch leader info for class_room_id=%s: %v", classID, err)
+						continue
+					}
+					if leaderRes == nil {
+						leader = nil
+					} else {
+						leader = leaderRes
+					}
+				} else if leaderData.Owner.OwnerRole == "staff" {
+					leaderRes, err := s.UserService.GetStaffInfor(ctx, leaderData.Owner.OwnerID)
+					if err != nil {
+						log.Printf("Cannot fetch leader info for class_room_id=%s: %v", classID, err)
+						continue
+					}
+					if leaderRes == nil {
+						leader = nil
+					}
+					leader = leaderRes
+				}
+			}
+
 			classMap[classID] = &ClassroomTemplateGatewayResponse{
 				ClassID:         classID,
 				ClassName:       class.Name,
 				ClassIcon:       *class.Icon,
+				Leader:          leader,
 				AssignTemplates: []*AssignTemplate{},
 			}
 

@@ -90,6 +90,7 @@ type ClassroomTemplateGatewayResponse struct {
 	ClassID         string            `json:"class_id"`
 	ClassName       string            `json:"class_name"`
 	ClassIcon       string            `json:"class_icon"`
+	Leader          *user.UserInfor   `json:"leader"`
 	AssignTemplates []*AssignTemplate `json:"assign_templates"`
 }
 
