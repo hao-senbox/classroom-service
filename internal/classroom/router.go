@@ -25,7 +25,7 @@ func RegisterRoutes(r *gin.Engine, handler *ClassroomHandler) {
 	{
 		apiGatewayClassroomGroup.GET("/classrooms", handler.GetClassroomsByOrg)
 		apiGatewayClassroomGroup.GET("/classrooms/teacher-assignments", handler.GetTeacherAssignmentsByClassroomID)
-		apiGatewayClassroomGroup.GET("/classrooms/student-assignments", handler.GetStudentAssignmentsByTermAndTeacherID)
+		apiGatewayClassroomGroup.GET("/classrooms/student-teacher-assignments", handler.GetStudentAssignmentsByTermAndTeacherID)
 		apiGatewayClassroomGroup.GET(("/classrooms/term"), handler.GetStudentsByTermAndClassroomID)
 		apiGatewayClassroomGroup.GET("/classrooms/template/students-teachers", handler.GetStudentsAndTeachersClassroomTemplateByClassroomID)
 		apiGatewayClassroomGroup.GET("/classrooms/template/term", handler.GetClassroomTemplateByTermID)
