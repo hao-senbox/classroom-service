@@ -37,6 +37,7 @@ type ClassroomService interface {
 	GetStudentsAndTeachersClassroomTemplateByClassroomID(ctx context.Context, classroomID, termID string) (*ClassroomTemplateByTeacherAndStudent, error)
 	GetClassroomTemplateByTermID(ctx context.Context, termID string) ([]*ClassroomTemplateGatewayResponse, error)
 	GetClassroomTemplateByTermIDAndClassroomID(ctx context.Context, classroomID, termID string) (*ClassroomTemplateGatewayResponse, error)
+	GetStudentAssignmentsByTermAndTeacherID(ctx context.Context, termID, teacherID string) ([]*string, error)
 }
 
 type classroomService struct {
@@ -1175,7 +1176,7 @@ func (s *classroomService) GetClassroomTemplateByTermIDAndStudentID(ctx context.
 	// 			return nil, err
 	// 		}
 	// 	}
-		
+
 	// }
 
 	// return &ClassroomTemplateByTermIDAndStudentIDResponse{
@@ -1185,7 +1186,7 @@ func (s *classroomService) GetClassroomTemplateByTermIDAndStudentID(ctx context.
 	// }, nil
 
 	return nil, nil
-	
+
 }
 
 func (s *classroomService) GetTeacherTemplateByTermIDAndStudentID(ctx context.Context, studentID, termID string) ([]*user.UserInfor, error) {
@@ -1220,5 +1221,46 @@ func (s *classroomService) GetTeacherTemplateByTermIDAndStudentID(ctx context.Co
 	}
 
 	return teacherArr, nil
+
+}
+
+func (s *classroomService) GetStudentAssignmentsByTermAndTeacherID(ctx context.Context, termID, teacherID string) ([]*string, error) {
+
+	term, err := s.TermService.GetTermByID(ctx, termID)
+	if err != nil {
+		return nil, err
+	}
+
+	if term == nil {
+		return nil, fmt.Errorf("term not found")
+	}
+
+	start, err := time.Parse("2006-01-02", term.StartDate)
+	if err != nil {
+		return nil, err
+	}
+
+	end, err := time.Parse("2006-01-02", term.EndDate)
+	if err != nil {
+		return nil, err
+	}
+
+	assignments, err := s.AssignRepository.GetAssignmentsByStartDateAndEndDateAndTeacherID(ctx, &start, &end, teacherID)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("assignments: %v\n", assignments)
+	studentMap := make(map[string]bool)
+	studentArr := make([]*string, 0)
+	for _, a := range assignments {
+		if a.StudentID != nil && *a.StudentID != "" {
+			if !studentMap[*a.StudentID] {
+				studentMap[*a.StudentID] = true
+				studentArr = append(studentArr, a.StudentID)
+			}
+		}
+	}
+
+	return studentArr, nil
 
 }
