@@ -533,7 +533,7 @@ func (c *callAPI) getListTeacherInfor(userID string, token string) (map[string]i
 
 func (c *callAPI) getCurrentUser(token string) (*CurrentUser, error) {
 
-	endpoint := "/v1/user/current-user/"
+	endpoint := "/v1/gateway/users/current"
 
 	header := map[string]string{
 		"Content-Type":  "application/json",
